@@ -34,9 +34,11 @@ The VAPT Tracker Portal is a centralized platform used by NBP, Paysys Labs, and 
 
 ## NBP Security Administrator
 - Manage calendar
-- Approve scope
+- Add new ad-hoc VAPT engagements and reports for mid-year projects
+- Approve initial scope for annual calendar and ad-hoc VAPT work
 - View reports
-- Close engagements
+- Perform final review and closing meeting
+- Close engagements. This is the ONLY role authorized to mark an engagement as Closed.
 - Approve risk acceptance
 
 ## NBP Security Viewer
@@ -44,13 +46,19 @@ The VAPT Tracker Portal is a centralized platform used by NBP, Paysys Labs, and 
 
 ## Paysys Security Administrator
 - Manage applications
-- Manage engagements
+- Possesses full administrative rights across the portal to add ad-hoc projects and reports, update statuses, and manage findings, except the right to mark an engagement as Closed
+- Initiate VAPT with Apprise after NBP scope agreement
 - Assign findings
 - Upload remediation evidence
+- Request Apprise revalidation
+- Review final reports and coordinate with NBP
+- Move engagement status to Go-Live
 
 ## Paysys Developer
 - View assigned findings
 - Upload fix evidence
+- Mark findings as fixed
+- Support production deployment after closure
 
 ## Vendor Administrator
 - Upload reports
@@ -83,35 +91,44 @@ Tracks planned assessments.
 
 Assessment Types:
 
-- White Box
-- Grey Box
-- Black Box
+1. Whitebox
+2. Black&Grey
 
 Lifecycle Status:
 
 - Planned
-- Initiated
-- In Progress
-- Draft Report
-- Fixing
-- Revalidation
-- Final Report
+- NBP Scope Agreement
+- Paysys-Apprise Initiation
+- Apprise Assessment
+- Draft Report Uploaded
+- Paysys Triage
+- Developer Fix
+- Fixed (Pending Revalidation)
+- Apprise Revalidation
+- Final Report Uploaded
+- Paysys IS Review & Comment
+- NBP IS Review & Closing Meeting
 - Closed
+- Go-Live
 
 ---
 
 # Module 3: Engagement Initiation & Scoping
 
-Formal scoping meeting between:
+The VAPT scope for annual calendar items and ad-hoc projects is formally agreed with NBP IS before vendor initiation.
 
-- NBP Information Security Team
+The first Engagement Initiation meeting is held between:
+
 - Paysys Labs
-- External VAPT Vendor
+- Apprise / External VAPT Vendor
+
+Bank / NBP attendance is optional for this first meeting because NBP scope agreement is captured as the prerequisite governance step.
 
 Capture:
 
 - Meeting Date
-- Participants
+- Participants, including optional Bank / NBP attendees if present
+- NBP Scope Agreement Status
 - Scope Included
 - Scope Excluded
 - Testing Window
@@ -135,14 +152,19 @@ Outputs:
 Workflow:
 
 Annual Calendar
-→ Scoping Meeting
-→ Scope Approval
-→ Assessment Execution
-→ Draft Report
-→ Remediation
-→ Revalidation
-→ Final Report
-→ Closure
+-> NBP Scope Agreement
+-> Paysys-Apprise Initiation
+-> Apprise Assessment
+-> Draft Report Uploaded by Vendor
+-> Paysys Triage & Developer Assignment
+-> Developer Fix
+-> Fixed (Pending Revalidation)
+-> Apprise Revalidation
+-> Final Report Uploaded by Vendor
+-> Paysys IS Review & Comment
+-> NBP IS Review & Closing Meeting
+-> Closed
+-> Go-Live
 
 ---
 
@@ -150,7 +172,6 @@ Annual Calendar
 
 Document Types:
 
-- Scope Documents
 - Draft Reports
 - Revalidation Reports
 - Final Reports
@@ -195,7 +216,7 @@ Status:
 - Open
 - Assigned
 - In Progress
-- Ready for Revalidation
+- Fixed (Pending Revalidation)
 - Passed
 - Failed
 - Risk Accepted
@@ -208,14 +229,14 @@ Status:
 Workflow:
 
 Open
-→ Assigned
-→ Fix Implemented
-→ Evidence Uploaded
-→ Revalidation Requested
-→ Passed / Failed
-→ Closed
+-> Assigned
+-> Fix Implemented
+-> Evidence Uploaded
+-> Fixed (Pending Revalidation)
+-> Passed / Failed
+-> Closed
 
-Failed revalidation automatically reopens the finding.
+Failed revalidation automatically reopens the finding and routes it back to the assigned developer for further fixing.
 
 ---
 
@@ -395,3 +416,4 @@ Passwords are never captured in audit records.
 - Centralized report repository
 - Full finding lifecycle management
 - Elimination of spreadsheet dependency
+

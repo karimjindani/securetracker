@@ -237,7 +237,7 @@ Represents one VAPT run for one application.
 Example:
 
 ```text
-NBP Internet Banking - White Box - March 2026
+NBP Internet Banking - Whitebox - March 2026
 ```
 
 | Column | Type | Required | Description |
@@ -245,7 +245,7 @@ NBP Internet Banking - White Box - March 2026
 | id | UUID | Yes | Primary key |
 | application_id | UUID | Yes | FK to applications |
 | title | VARCHAR(250) | Yes | Engagement title |
-| assessment_type | VARCHAR(50) | Yes | WHITE_BOX, GREY_BOX, BLACK_BOX |
+| assessment_type | VARCHAR(50) | Yes | WHITEBOX, BLACK_GREY |
 | planned_start_date | DATE | No | Planned start date |
 | planned_end_date | DATE | No | Planned end date |
 | planned_month | VARCHAR(20) | No | Calendar month |
@@ -267,18 +267,19 @@ Engagement status values:
 
 ```text
 PLANNED
-INITIATED
-SCOPING_IN_PROGRESS
-SCOPE_PENDING_APPROVAL
-SCOPE_APPROVED
-TESTING_IN_PROGRESS
+NBP_SCOPE_AGREED
+PAYSYS_APPRISE_INITIATED
+APPRISE_ASSESSMENT
 DRAFT_REPORT_UPLOADED
-FINDINGS_CREATED
-FIXING_IN_PROGRESS
-REVALIDATION_IN_PROGRESS
+PAYSYS_TRIAGE
+DEVELOPER_FIX
+FIXED_PENDING_REVALIDATION
+APPRISE_REVALIDATION
 FINAL_REPORT_UPLOADED
-CLOSURE_PENDING
+PAYSYS_IS_REVIEW_AND_COMMENT
+NBP_IS_REVIEW_CLOSING_MEETING
 CLOSED
+GO_LIVE
 CANCELLED
 ```
 
@@ -297,7 +298,7 @@ CREATE INDEX idx_engagement_vendor ON vapt_engagements(vendor_organization_id);
 
 ## 8.1 scoping_records
 
-Stores formal scoping meeting information.
+Stores formal scoping meeting information. NBP scope agreement is captured before Paysys initiates VAPT with Apprise / External VAPT Vendor; Bank / NBP attendance is optional for the first Paysys-Apprise initiation meeting and can be captured in the participants field when present.
 
 | Column | Type | Required | Description |
 |---|---|---:|---|
@@ -305,7 +306,7 @@ Stores formal scoping meeting information.
 | engagement_id | UUID | Yes | FK to vapt_engagements |
 | meeting_date | DATE | Yes | Scoping meeting date |
 | meeting_time | TIME | No | Scoping meeting time |
-| participants | TEXT | Yes | Participant list |
+| participants | TEXT | Yes | Participant list, including optional Bank / NBP attendees if present |
 | minutes | TEXT | No | Meeting notes |
 | scope_included | TEXT | Yes | In-scope items |
 | scope_excluded | TEXT | No | Out-of-scope items |
@@ -461,7 +462,7 @@ OPEN
 ASSIGNED
 IN_PROGRESS
 FIX_IMPLEMENTED
-READY_FOR_REVALIDATION
+FIXED_PENDING_REVALIDATION
 REVALIDATION_PASSED
 REVALIDATION_FAILED
 RISK_ACCEPTANCE_REQUESTED
@@ -666,27 +667,27 @@ INFORMATIONAL
 ## 16.2 ref_assessment_types
 
 ```text
-WHITE_BOX
-GREY_BOX
-BLACK_BOX
+WHITEBOX
+BLACK_GREY
 ```
 
 ## 16.3 ref_engagement_statuses
 
 ```text
 PLANNED
-INITIATED
-SCOPING_IN_PROGRESS
-SCOPE_PENDING_APPROVAL
-SCOPE_APPROVED
-TESTING_IN_PROGRESS
+NBP_SCOPE_AGREED
+PAYSYS_APPRISE_INITIATED
+APPRISE_ASSESSMENT
 DRAFT_REPORT_UPLOADED
-FINDINGS_CREATED
-FIXING_IN_PROGRESS
-REVALIDATION_IN_PROGRESS
+PAYSYS_TRIAGE
+DEVELOPER_FIX
+FIXED_PENDING_REVALIDATION
+APPRISE_REVALIDATION
 FINAL_REPORT_UPLOADED
-CLOSURE_PENDING
+PAYSYS_IS_REVIEW_AND_COMMENT
+NBP_IS_REVIEW_CLOSING_MEETING
 CLOSED
+GO_LIVE
 CANCELLED
 ```
 
@@ -697,7 +698,7 @@ OPEN
 ASSIGNED
 IN_PROGRESS
 FIX_IMPLEMENTED
-READY_FOR_REVALIDATION
+FIXED_PENDING_REVALIDATION
 REVALIDATION_PASSED
 REVALIDATION_FAILED
 RISK_ACCEPTANCE_REQUESTED

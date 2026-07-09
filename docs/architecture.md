@@ -16,7 +16,7 @@ The VAPT Tracker Portal is designed as a secure, auditable, role-based collabora
 The architecture must support:
 
 - Annual VAPT calendar management
-- Engagement initiation and scoping
+- Engagement initiation and scoping, beginning with NBP scope agreement before Paysys and Apprise / External VAPT Vendor coordination while Bank / NBP attendance is optional for the first meeting
 - Secure report repository
 - Password-protected PDF handling
 - Findings lifecycle tracking
@@ -164,10 +164,10 @@ Each user belongs to one organization and one or more roles.
 
 | Role | Organization | Access Level |
 |---|---|---|
-| NBP Security Admin | NBP | Full governance access |
+| NBP Security Admin | NBP | Full governance access and only role authorized to close engagements |
 | NBP Viewer | NBP | Read-only |
-| Paysys Security Admin | Paysys | Manage remediation and evidence |
-| Paysys Developer | Paysys | Assigned findings only |
+| Paysys Security Admin | Paysys | Full portal administration except closing engagements |
+| Paysys Developer | Paysys | Assigned findings and fix status updates |
 | Vendor Admin | Vendor | Upload reports, create findings, revalidate |
 | Auditor | Any / Independent | Read-only audit access |
 | System Admin | Platform | User and configuration management |
@@ -181,10 +181,12 @@ Each user belongs to one organization and one or more roles.
 Can:
 
 - View all engagements
-- Approve scopes
+- Add new ad-hoc VAPT engagements and reports for mid-year projects
+- Approve initial scopes for annual calendar and ad-hoc VAPT work
 - View reports
+- Perform final review and closing meeting
 - Approve risk acceptance
-- Close engagements
+- Close engagements. This is the ONLY role authorized to mark an engagement as Closed.
 - View audit logs
 
 ### Paysys Security Admin
@@ -192,9 +194,15 @@ Can:
 Can:
 
 - View all Paysys-related engagements
+- Add ad-hoc projects and reports
+- Update engagement statuses except Closed
+- Move engagement status to Go-Live
+- Manage findings
+- Initiate VAPT with Apprise after NBP scope agreement
 - Assign findings
 - Upload remediation evidence
 - Request revalidation
+- Review final reports and coordinate with NBP
 - View reports
 
 ### Paysys Developer
@@ -204,6 +212,8 @@ Can:
 - View findings assigned to them
 - Update remediation notes
 - Upload fix evidence
+- Mark findings as fixed
+- Support production deployment after closure
 
 ### Vendor Admin
 
@@ -322,6 +332,8 @@ Key fields:
 ### scoping_records
 
 Stores scoping meeting details.
+
+NBP scope agreement is captured before Paysys initiates VAPT with Apprise / External VAPT Vendor. Bank / NBP attendance is optional for the first Paysys-Apprise initiation meeting and should be recorded in participants when present.
 
 Key fields:
 
@@ -615,18 +627,20 @@ No password value is ever recorded.
 ```mermaid
 stateDiagram-v2
     [*] --> Planned
-    Planned --> Initiated
-    Initiated --> ScopePendingApproval
-    ScopePendingApproval --> ScopeApproved
-    ScopeApproved --> TestingInProgress
-    TestingInProgress --> DraftReportUploaded
-    DraftReportUploaded --> FindingsCreated
-    FindingsCreated --> Fixing
-    Fixing --> Revalidation
-    Revalidation --> FinalReportUploaded
-    FinalReportUploaded --> ClosurePending
-    ClosurePending --> Closed
-    Closed --> [*]
+    Planned --> NBPScopeAgreement
+    NBPScopeAgreement --> PaysysAppriseInitiated
+    PaysysAppriseInitiated --> AppriseAssessment
+    AppriseAssessment --> DraftReportUploaded
+    DraftReportUploaded --> PaysysTriage
+    PaysysTriage --> DeveloperFix
+    DeveloperFix --> FixedPendingRevalidation
+    FixedPendingRevalidation --> AppriseRevalidation
+    AppriseRevalidation --> FinalReportUploaded
+    FinalReportUploaded --> PaysysISReviewAndComment
+    PaysysISReviewAndComment --> NBPISReviewAndClosingMeeting
+    NBPISReviewAndClosingMeeting --> Closed
+    Closed --> GoLive
+    GoLive --> [*]
 ```
 
 ---
@@ -638,9 +652,9 @@ stateDiagram-v2
     [*] --> Open
     Open --> Assigned
     Assigned --> InProgress
-    InProgress --> ReadyForRevalidation
-    ReadyForRevalidation --> Passed
-    ReadyForRevalidation --> Failed
+    InProgress --> FixedPendingRevalidation
+    FixedPendingRevalidation --> Passed
+    FixedPendingRevalidation --> Failed
     Failed --> InProgress
     Passed --> Closed
     InProgress --> RiskAcceptanceRequested

@@ -218,6 +218,7 @@ Acceptance Criteria:
 - Select application
 - Select month
 - Select assessment type
+- Assessment type values are Whitebox and Black&Grey
 
 ---
 
@@ -289,14 +290,35 @@ Acceptance Criteria:
 Statuses:
 
 - Planned
-- Initiated
-- Scope Approved
-- Testing
-- Draft Report
-- Fixing
-- Revalidation
-- Final Report
+- NBP Scope Agreement
+- Paysys-Apprise Initiation
+- Apprise Assessment
+- Draft Report Uploaded
+- Paysys Triage
+- Developer Fix
+- Fixed (Pending Revalidation)
+- Apprise Revalidation
+- Final Report Uploaded
+- Paysys IS Review & Comment
+- NBP IS Review & Closing Meeting
 - Closed
+- Go-Live
+
+Final governance sequence:
+
+- NBP Scope Agreement
+- Paysys-Apprise Initiation
+- Apprise Assessment
+- Draft Report Uploaded by Vendor
+- Paysys Triage & Developer Assignment
+- Developer Fix
+- Fixed (Pending Revalidation)
+- Apprise Revalidation
+- Final Report Uploaded by Vendor
+- Paysys IS Review & Comment
+- NBP IS Review & Closing Meeting
+- Closed
+- Go-Live
 
 ---
 
@@ -320,7 +342,7 @@ Acceptance Criteria:
 
 ## Objective
 
-Support formal scoping meetings.
+Support formal scoping and initiation. NBP scope agreement is captured before Paysys initiates VAPT with Apprise / External VAPT Vendor, with Bank / NBP attendance optional for the first Paysys-Apprise initiation meeting.
 
 Priority: P0
 
@@ -337,7 +359,8 @@ So that scope is documented.
 Acceptance Criteria:
 
 - Meeting date
-- Participants
+- Participants, including optional Bank / NBP attendees if present
+- NBP scope agreement captured for annual calendar and ad-hoc projects
 - Scope included
 - Scope excluded
 
@@ -355,6 +378,8 @@ Acceptance Criteria:
 
 - Multiple files supported
 
+Note: scope documents are stored with scoping records and are not listed as report repository document types.
+
 ---
 
 ### US-018 Scope Approval
@@ -369,6 +394,7 @@ Acceptance Criteria:
 
 - Approval workflow
 - Audit trail
+- Scope must be agreed by NBP IS before Paysys-Apprise initiation
 
 ---
 
@@ -516,6 +542,7 @@ Acceptance Criteria:
 - Severity
 - Description
 - Recommendation
+- Findings originate from the Apprise draft report
 
 ---
 
@@ -530,6 +557,7 @@ So that ownership is clear.
 Acceptance Criteria:
 
 - Assigned user captured
+- Paysys IS triages the draft report before assignment
 
 ---
 
@@ -544,6 +572,7 @@ So that stakeholders are informed.
 Acceptance Criteria:
 
 - Status changes recorded
+- Developer can mark a remediated finding as Fixed (Pending Revalidation)
 
 ---
 
@@ -638,6 +667,7 @@ So that fixes can be tested.
 Acceptance Criteria:
 
 - Request recorded
+- Request is sent to Apprise after developer marks findings Fixed (Pending Revalidation)
 
 ---
 
@@ -653,6 +683,8 @@ Acceptance Criteria:
 
 - Pass
 - Fail
+- Passed findings can proceed toward final reporting
+- Failed findings are routed back to developers
 
 ---
 
@@ -667,6 +699,23 @@ So that remediation continues.
 Acceptance Criteria:
 
 - Status automatically updated
+- Failed revalidation returns the finding to developer fixing workflow
+
+---
+
+### US-036 Coordinate Go-Live
+
+As Paysys Security,
+
+I want to coordinate production deployment with NBP POCs after formal closure,
+
+So that validated security fixes are promoted to production.
+
+Acceptance Criteria:
+
+- Engagement must be Closed before Go-Live
+- NBP POC deployment coordination captured
+- Go-Live status update recorded
 
 ---
 
