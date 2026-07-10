@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import type { CurrentUser, TokenUser } from './current-user.types.js';
 import { PrismaService } from '../database/prisma.service.js';
 
@@ -16,24 +17,17 @@ export class UserSyncService {
       }
     });
 
-    const user = await this.prisma.user.upsert({
-      where: { keycloakUserId: tokenUser.keycloakUserId },
-      update: {
-        email: tokenUser.email,
-        fullName: tokenUser.fullName,
-        role: tokenUser.role,
-        organizationId: organization.id,
-        lastLoginAt: new Date()
-      },
-      create: {
-        keycloakUserId: tokenUser.keycloakUserId,
-        email: tokenUser.email,
-        fullName: tokenUser.fullName,
-        role: tokenUser.role,
-        organizationId: organization.id,
-        lastLoginAt: new Date()
-      }
-    });
+    const lastLoginAt = new Date();
+    const syncData = {
+      keycloakUserId: tokenUser.keycloakUserId,
+      email: tokenUser.email,
+      fullName: tokenUser.fullName,
+      role: tokenUser.role,
+      organizationId: organization.id,
+      lastLoginAt
+    };
+
+    const user = await this.upsertUser(syncData);
 
     return {
       id: user.id,
@@ -45,5 +39,37 @@ export class UserSyncService {
       organizationName: organization.name,
       organizationType: organization.organizationType
     };
+  }
+
+  private async upsertUser(syncData: {
+    keycloakUserId: string;
+    email: string;
+    fullName: string;
+    role: TokenUser['role'];
+    organizationId: string;
+    lastLoginAt: Date;
+  }) {
+    try {
+      return await this.prisma.user.upsert({
+        where: { keycloakUserId: syncData.keycloakUserId },
+        update: syncData,
+        create: syncData
+      });
+    } catch (error) {
+      if (!this.isUniqueEmailConflict(error)) throw error;
+      return this.prisma.user.update({
+        where: { email: syncData.email },
+        data: syncData
+      });
+    }
+  }
+
+  private isUniqueEmailConflict(error: unknown) {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002' &&
+      Array.isArray(error.meta?.target) &&
+      error.meta.target.includes('email')
+    );
   }
 }
