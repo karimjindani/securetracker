@@ -210,7 +210,7 @@ Stores the applications/services covered under the VAPT calendar.
 | description | TEXT | No | Application description |
 | business_owner_name | VARCHAR(150) | No | Business owner |
 | technical_owner_name | VARCHAR(150) | No | Technical owner |
-| environment | VARCHAR(50) | Yes | PROD, UAT, PRE_PROD, DEV |
+| environment | VARCHAR(50) | Yes | PRODUCTION, STAGING, UAT, DEVELOPMENT |
 | url | TEXT | No | Application URL |
 | criticality | VARCHAR(30) | Yes | CRITICAL, HIGH, MEDIUM, LOW |
 | technology_stack | TEXT | No | Technology summary |
@@ -601,6 +601,10 @@ Common audit actions:
 
 ```text
 USER_LOGIN
+APPLICATION_CREATED
+APPLICATION_UPDATED
+CALENDAR_ENTRY_CREATED
+CALENDAR_ENTRY_UPDATED
 ENGAGEMENT_CREATED
 SCOPING_RECORD_CREATED
 SCOPING_RECORD_UPDATED

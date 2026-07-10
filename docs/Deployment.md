@@ -68,3 +68,13 @@ The realm name is `securetracker` and the public frontend client is `securetrack
 ## Secrets
 
 Do not commit `.env` files. Use `.env.example` only for safe local defaults.
+# v0.3.0 Local Feature Notes
+
+After the local stack is running, authenticated users can access:
+
+- Frontend application inventory at `/applications`
+- Frontend VAPT calendar at `/calendar`
+- Backend application APIs at `/applications`
+- Backend calendar APIs at `/calendar`
+
+Calendar entries created in `v0.3.0` are stored as `PLANNED` VAPT engagements. No additional environment variables are required beyond the `v0.2.0` authentication configuration.

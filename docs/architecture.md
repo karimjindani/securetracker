@@ -814,6 +814,20 @@ PATCH /users/:id
 
 JWTs are validated against the Keycloak realm issuer and JWKS endpoint. Local users are synchronized from token claims and mapped to organizations in PostgreSQL.
 
+## v0.3.0 Application and Calendar API Baseline
+
+```text
+GET /applications
+GET /applications/:id
+POST /applications
+PATCH /applications/:id
+GET /calendar
+POST /calendar
+PATCH /calendar/:id
+```
+
+Application management is limited to System Admin and Paysys Security Admin. Calendar management is limited to System Admin, NBP Security Admin, and Paysys Security Admin. Calendar entries are VAPT engagements in `PLANNED` status only; full lifecycle status transitions are introduced after this baseline.
+
 ---
 
 # 14. Security Architecture

@@ -12,9 +12,15 @@ interface AuthenticatedUser {
 }
 
 type AuthState =
-  | { status: 'loading'; user?: undefined; login: () => void; logout: () => void }
-  | { status: 'anonymous'; user?: undefined; login: () => void; logout: () => void }
-  | { status: 'authenticated'; user: AuthenticatedUser; login: () => void; logout: () => void };
+  | { status: 'loading'; user?: undefined; login: () => void; logout: () => void; apiFetch: typeof fetch }
+  | { status: 'anonymous'; user?: undefined; login: () => void; logout: () => void; apiFetch: typeof fetch }
+  | {
+      status: 'authenticated';
+      user: AuthenticatedUser;
+      login: () => void;
+      logout: () => void;
+      apiFetch: typeof fetch;
+    };
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
@@ -64,8 +70,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const logout = () => {
       void keycloak.logout({ redirectUri: window.location.origin });
     };
-    if (state === 'authenticated' && user) return { status: state, user, login, logout };
-    return { status: state, login, logout } as AuthState;
+    const apiFetch: typeof fetch = (input, init) => {
+      const headers = new Headers(init?.headers);
+      if (keycloak.token) headers.set('Authorization', `Bearer ${keycloak.token}`);
+      return fetch(input, { ...init, headers });
+    };
+    if (state === 'authenticated' && user) return { status: state, user, login, logout, apiFetch };
+    return { status: state, login, logout, apiFetch } as AuthState;
   }, [state, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

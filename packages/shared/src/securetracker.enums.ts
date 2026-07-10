@@ -50,6 +50,18 @@ export type FindingStatus = typeof findingStatuses[number];
 export const assessmentTypes = ['WHITEBOX', 'BLACK_GREY'] as const;
 export type AssessmentType = typeof assessmentTypes[number];
 
+export const applicationCriticalities = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const;
+export type ApplicationCriticality = typeof applicationCriticalities[number];
+
+export const applicationEnvironments = ['PRODUCTION', 'STAGING', 'UAT', 'DEVELOPMENT'] as const;
+export type ApplicationEnvironment = typeof applicationEnvironments[number];
+
+export const canManageApplications = (role: Role): boolean =>
+  role === 'SYSTEM_ADMIN' || role === 'PAYSYS_SECURITY_ADMIN';
+
+export const canManageCalendar = (role: Role): boolean =>
+  role === 'SYSTEM_ADMIN' || role === 'NBP_SECURITY_ADMIN' || role === 'PAYSYS_SECURITY_ADMIN';
+
 export const canCloseEngagement = (role: Role): boolean => role === 'NBP_SECURITY_ADMIN';
 
 export const canMoveToGoLive = (role: Role): boolean => role === 'PAYSYS_SECURITY_ADMIN';
@@ -61,13 +73,13 @@ export const canManageOrganizations = (role: Role): boolean => role === 'SYSTEM_
 export const canManageUsers = (role: Role): boolean => role === 'SYSTEM_ADMIN';
 
 export const navigationByRole: Record<Role, string[]> = {
-  SYSTEM_ADMIN: ['dashboard', 'organizations', 'users'],
-  NBP_SECURITY_ADMIN: ['dashboard', 'organizations', 'users'],
-  NBP_VIEWER: ['dashboard'],
-  PAYSYS_SECURITY_ADMIN: ['dashboard', 'organizations', 'users'],
-  PAYSYS_DEVELOPER: ['dashboard'],
-  VENDOR_ADMIN: ['dashboard'],
-  AUDITOR: ['dashboard']
+  SYSTEM_ADMIN: ['dashboard', 'applications', 'calendar', 'organizations', 'users'],
+  NBP_SECURITY_ADMIN: ['dashboard', 'applications', 'calendar', 'organizations', 'users'],
+  NBP_VIEWER: ['dashboard', 'applications', 'calendar'],
+  PAYSYS_SECURITY_ADMIN: ['dashboard', 'applications', 'calendar', 'organizations', 'users'],
+  PAYSYS_DEVELOPER: ['dashboard', 'applications', 'calendar'],
+  VENDOR_ADMIN: ['dashboard', 'applications', 'calendar'],
+  AUDITOR: ['dashboard', 'applications', 'calendar']
 };
 
 export const isRole = (value: string): value is Role => roles.includes(value as Role);
