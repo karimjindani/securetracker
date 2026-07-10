@@ -379,17 +379,17 @@ Note: scoping attachments are stored with scoping records and are not listed as 
 
 ---
 
-### US-018 Scope Approval
+### US-018 Finalize Scoping Record
 
-As NBP Security,
+As Paysys Security,
 
-I want to approve scope,
+I want to finalize the scoping record,
 
-So that testing can proceed.
+So that initiation details are locked before testing proceeds.
 
 Acceptance Criteria:
 
-- Approval workflow
+- Record status changes from Draft to Final
 - Audit trail
 
 ---

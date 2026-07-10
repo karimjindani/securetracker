@@ -345,7 +345,7 @@ Key fields:
 - testing_window
 - test_accounts_summary
 - minutes
-- approval_status
+- record_status
 
 ---
 
@@ -678,8 +678,8 @@ stateDiagram-v2
 ## Events to Audit
 
 - User login
-- Scope created
-- Scope approved
+- Scoping record created
+- Scoping record updated
 - Report uploaded
 - Report viewed
 - Report downloaded
@@ -704,7 +704,7 @@ Email notifications should be triggered for:
 
 - Engagement created
 - Scoping meeting scheduled
-- Scope approved
+- Scoping record updated
 - Report uploaded
 - Finding assigned
 - Due date approaching

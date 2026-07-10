@@ -114,7 +114,6 @@ erDiagram
     ORGANIZATIONS ||--o{ VAPT_ENGAGEMENTS : vendor_for
     APPLICATIONS ||--o{ VAPT_ENGAGEMENTS : has
     VAPT_ENGAGEMENTS ||--o{ SCOPING_RECORDS : has
-    VAPT_ENGAGEMENTS ||--o{ SCOPING_APPROVALS : has
     VAPT_ENGAGEMENTS ||--o{ REPORTS : has
     VAPT_ENGAGEMENTS ||--o{ FINDINGS : has
     REPORTS ||--o{ REPORT_VERSIONS : has
@@ -313,34 +312,12 @@ Stores formal scoping meeting information. The first Engagement Initiation meeti
 | testing_window_end | TIMESTAMP | No | Approved test end |
 | test_accounts_summary | TEXT | No | Non-secret account summary |
 | architecture_summary | TEXT | No | High-level architecture notes |
-| approval_status | VARCHAR(50) | Yes | DRAFT, PENDING, APPROVED, REJECTED |
+| record_status | VARCHAR(50) | Yes | DRAFT, FINAL |
 | created_by | UUID | Yes | FK to users |
 | created_at | TIMESTAMP | Yes | Creation timestamp |
 | updated_at | TIMESTAMP | No | Last update timestamp |
 
 Security note: do not store test account passwords in this table.
-
-## 8.2 scoping_approvals
-
-Stores approval from NBP, Paysys, and Vendor.
-
-| Column | Type | Required | Description |
-|---|---|---:|---|
-| id | UUID | Yes | Primary key |
-| engagement_id | UUID | Yes | FK to vapt_engagements |
-| organization_id | UUID | Yes | FK to organizations |
-| approver_user_id | UUID | Yes | FK to users |
-| approval_role | VARCHAR(50) | Yes | NBP, PAYSYS, VENDOR |
-| approval_status | VARCHAR(50) | Yes | PENDING, APPROVED, REJECTED |
-| comments | TEXT | No | Approval comments |
-| approved_at | TIMESTAMP | No | Approval timestamp |
-| created_at | TIMESTAMP | Yes | Creation timestamp |
-
-Constraint:
-
-```sql
-UNIQUE (engagement_id, organization_id, approval_role)
-```
 
 ---
 
@@ -353,7 +330,6 @@ Stores logical report records.
 Report types:
 
 ```text
-SCOPE_DOCUMENT
 DRAFT_REPORT
 REVALIDATION_REPORT
 FINAL_REPORT
@@ -625,7 +601,7 @@ Common audit actions:
 USER_LOGIN
 ENGAGEMENT_CREATED
 SCOPING_RECORD_CREATED
-SCOPE_APPROVED
+SCOPING_RECORD_UPDATED
 REPORT_UPLOADED
 REPORT_VIEW_REQUESTED
 REPORT_VIEW_SUCCESS
@@ -788,7 +764,7 @@ CREATE TABLE scoping_records (
     testing_window_end TIMESTAMP,
     test_accounts_summary TEXT,
     architecture_summary TEXT,
-    approval_status VARCHAR(50) NOT NULL DEFAULT 'DRAFT',
+    record_status VARCHAR(50) NOT NULL DEFAULT 'DRAFT',
     created_by UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP

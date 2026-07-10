@@ -1,0 +1,31 @@
+{
+  "name": "securetracker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "VAPT Tracker Portal monorepo",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "db:generate": "prisma generate",
+    "typecheck": "npm run typecheck -w @securetracker/shared && npm run build -w @securetracker/shared && npm run typecheck -w @securetracker/backend && npm run typecheck -w @securetracker/frontend",
+    "lint": "node scripts/lint.mjs",
+    "test": "npm run test -w @securetracker/shared && npm run test -w @securetracker/backend && npm run test -w @securetracker/frontend",
+    "build": "npm run build -w @securetracker/shared && npm run build -w @securetracker/backend && npm run build -w @securetracker/frontend",
+    "dev:backend": "npm run dev -w @securetracker/backend",
+    "dev:frontend": "npm run dev -w @securetracker/frontend"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "prisma": "^6.19.3",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3"
+  }
+}
