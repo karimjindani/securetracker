@@ -629,6 +629,16 @@ ENGAGEMENT_CLOSED
 
 Security note: never log passwords, PDF passwords, access tokens, API keys, or secrets.
 
+## 15.2 Regression Data Lifecycle
+
+Regression-generated data must use the configured prefix, defaulting to:
+
+```text
+REGRESSION_
+```
+
+Cleanup removes only regression-prefixed application/calendar data and directly related records. Reset removes business workflow records and restores seeded organizations.
+
 ---
 
 # 16. Reference Tables

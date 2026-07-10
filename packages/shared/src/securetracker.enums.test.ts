@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   canManageApplications,
   canManageCalendar,
+  canAccessOps,
   canCloseEngagement,
   canManageOrganizations,
   canMoveToGoLive,
@@ -32,6 +33,8 @@ describe('securetracker shared enums', () => {
     expect(canManageApplications('PAYSYS_SECURITY_ADMIN')).toBe(true);
     expect(canManageApplications('AUDITOR')).toBe(false);
     expect(canManageCalendar('NBP_SECURITY_ADMIN')).toBe(true);
+    expect(canAccessOps('SYSTEM_ADMIN')).toBe(true);
+    expect(canAccessOps('NBP_SECURITY_ADMIN')).toBe(false);
     expect(navigationByRole.AUDITOR).toEqual(['dashboard', 'applications', 'calendar']);
   });
 });

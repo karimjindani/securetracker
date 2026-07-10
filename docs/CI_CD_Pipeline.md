@@ -14,6 +14,17 @@ npm test
 npm run build
 ```
 
+## Regression Gate
+
+Starting in `v0.3.1`, local/dev regression is available through Playwright:
+
+```text
+npm run test:e2e
+npm run test:regression
+```
+
+These are documented local gates for now. They should be added to CI once ephemeral PostgreSQL, Keycloak, MinIO, SMTP, backend, and frontend services are provisioned inside the workflow.
+
 ## Security Scanning
 
 Security scanning is targeted for a later hardening baseline:

@@ -78,3 +78,29 @@ After the local stack is running, authenticated users can access:
 - Backend calendar APIs at `/calendar`
 
 Calendar entries created in `v0.3.0` are stored as `PLANNED` VAPT engagements. No additional environment variables are required beyond the `v0.2.0` authentication configuration.
+
+# v0.3.1 Ops Console and Regression
+
+Ops Console is disabled by default. Enable it only in local/dev:
+
+```powershell
+$env:OPS_ENABLED="true"
+$env:VITE_OPS_ENABLED="true"
+```
+
+Regression commands:
+
+```powershell
+npm.cmd run test:e2e
+npm.cmd run test:regression
+npm.cmd run test:data:cleanup
+npm.cmd run reset:seeded
+```
+
+Open the Ops Console at:
+
+```text
+http://localhost:5173/ops
+```
+
+The page is visible only to System Admin users when frontend Ops is enabled.

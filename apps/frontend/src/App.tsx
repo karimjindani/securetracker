@@ -2,9 +2,13 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import AppsIcon from '@mui/icons-material/Apps';
 import BusinessIcon from '@mui/icons-material/Business';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import CleaningServicesIcon from '@mui/icons-material/CleaningServices';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import LogoutIcon from '@mui/icons-material/Logout';
+import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import PeopleIcon from '@mui/icons-material/People';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import SecurityIcon from '@mui/icons-material/Security';
 import {
   Alert,
@@ -49,6 +53,7 @@ import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react
 import { AuthProvider, useAuth } from './auth/AuthProvider.js';
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
+const opsEnabled = import.meta.env.VITE_OPS_ENABLED === 'true';
 
 interface ApplicationRecord {
   id: string;
@@ -71,6 +76,34 @@ interface CalendarEntry {
   plannedEndDate?: string;
   status: string;
   application: ApplicationRecord;
+}
+
+interface OpsServiceStatus {
+  name: string;
+  status: 'ok' | 'down' | 'unavailable';
+  detail: string;
+}
+
+interface OpsHealth {
+  opsEnabled: boolean;
+  prefix: string;
+  services: OpsServiceStatus[];
+}
+
+interface OpsContainer {
+  name: string;
+  service: string;
+  state: string;
+  status: string;
+}
+
+interface OpsRun {
+  id: string;
+  status: 'running' | 'passed' | 'failed';
+  startedAt: string;
+  finishedAt?: string;
+  exitCode?: number | null;
+  logs: string[];
 }
 
 const emptyApplicationForm = {
@@ -115,7 +148,8 @@ const navigation = [
   { id: 'applications', label: 'Applications', path: '/applications', icon: <AppsIcon /> },
   { id: 'calendar', label: 'VAPT Calendar', path: '/calendar', icon: <CalendarMonthIcon /> },
   { id: 'organizations', label: 'Organizations', path: '/organizations', icon: <BusinessIcon /> },
-  { id: 'users', label: 'Users', path: '/users', icon: <PeopleIcon /> }
+  { id: 'users', label: 'Users', path: '/users', icon: <PeopleIcon /> },
+  { id: 'ops', label: 'Ops Console', path: '/ops', icon: <MonitorHeartIcon /> }
 ];
 
 export function App() {
@@ -146,7 +180,9 @@ function ProtectedShell() {
     return <LoginScreen onLogin={auth.login} />;
   }
 
-  const allowedNavigation = navigation.filter((item) => navigationByRole[auth.user.role].includes(item.id));
+  const allowedNavigation = navigation.filter(
+    (item) => navigationByRole[auth.user.role].includes(item.id) && (item.id !== 'ops' || opsEnabled)
+  );
 
   return (
     <>
@@ -197,11 +233,133 @@ function ProtectedShell() {
             <Route path="/calendar" element={<GuardedPage required="calendar" element={<CalendarPage />} />} />
             <Route path="/organizations" element={<RestrictedPage required="organizations" title="Organizations" />} />
             <Route path="/users" element={<RestrictedPage required="users" title="Users" />} />
+            <Route path="/ops" element={<GuardedPage required="ops" element={<OpsPage />} />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Container>
       </Box>
     </>
+  );
+}
+
+function OpsPage() {
+  const { apiFetch } = useAuth();
+  const [health, setHealth] = useState<OpsHealth | null>(null);
+  const [containers, setContainers] = useState<OpsContainer[]>([]);
+  const [run, setRun] = useState<OpsRun | null>(null);
+  const [message, setMessage] = useState('');
+
+  const loadOps = async () => {
+    const [healthResponse, containersResponse] = await Promise.all([
+      apiFetch(`${apiBaseUrl}/ops/health`),
+      apiFetch(`${apiBaseUrl}/ops/containers`)
+    ]);
+    if (healthResponse.ok) setHealth(await healthResponse.json());
+    if (containersResponse.ok) setContainers(await containersResponse.json());
+  };
+
+  useEffect(() => {
+    if (opsEnabled) void loadOps();
+  }, []);
+
+  useEffect(() => {
+    if (!run || run.status !== 'running') return;
+    const timer = window.setInterval(async () => {
+      const response = await apiFetch(`${apiBaseUrl}/ops/regression/runs/${run.id}`);
+      if (response.ok) setRun(await response.json());
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [apiFetch, run]);
+
+  if (!opsEnabled) {
+    return <Alert severity="warning">Ops Console is disabled for this frontend environment.</Alert>;
+  }
+
+  const startRegression = async () => {
+    const response = await apiFetch(`${apiBaseUrl}/ops/regression/run`, { method: 'POST' });
+    if (response.ok) {
+      setRun(await response.json());
+      setMessage('Regression suite started.');
+    } else {
+      setMessage('Regression suite could not be started.');
+    }
+  };
+
+  const cleanup = async () => {
+    if (!window.confirm('Clean only regression-generated test data?')) return;
+    const response = await apiFetch(`${apiBaseUrl}/ops/test-data/cleanup`, { method: 'POST' });
+    setMessage(response.ok ? 'Regression test data cleaned.' : 'Regression cleanup failed.');
+    await loadOps();
+  };
+
+  const reset = async () => {
+    if (!window.confirm('Reset SecureTracker to seeded baseline data?')) return;
+    const response = await apiFetch(`${apiBaseUrl}/ops/reset`, { method: 'POST' });
+    setMessage(response.ok ? 'Seeded baseline restored.' : 'Seeded reset failed.');
+    await loadOps();
+  };
+
+  return (
+    <Stack spacing={3}>
+      <PageTitle title="Ops Console" subtitle="Local development health, regression, cleanup, and reset controls." />
+      {message && <Alert severity={message.includes('failed') || message.includes('could not') ? 'error' : 'success'}>{message}</Alert>}
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5}>
+        <Button variant="contained" startIcon={<PlayArrowIcon />} onClick={startRegression}>
+          Run Regression Suite
+        </Button>
+        <Button variant="outlined" startIcon={<CleaningServicesIcon />} onClick={cleanup}>
+          Clean Test Data
+        </Button>
+        <Button color="warning" variant="outlined" startIcon={<RestartAltIcon />} onClick={reset}>
+          Reset Seeded Data
+        </Button>
+      </Stack>
+      <Grid container spacing={2}>
+        {(health?.services ?? []).map((service) => (
+          <Grid key={service.name} size={{ xs: 12, md: 4 }}>
+            <RecordCard
+              title={service.name}
+              chips={[service.status.toUpperCase()]}
+              lines={[service.detail, `Regression prefix: ${health?.prefix ?? 'REGRESSION_'}`]}
+            />
+          </Grid>
+        ))}
+      </Grid>
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
+        <Typography variant="h6" gutterBottom>
+          Containers
+        </Typography>
+        <Stack spacing={1}>
+          {containers.map((container) => (
+            <Box key={`${container.service}-${container.name}`} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 2fr' }, gap: 1 }}>
+              <Typography variant="body2">{container.service}</Typography>
+              <Typography variant="body2" color="text.secondary">{container.state}</Typography>
+              <Typography variant="body2" color="text.secondary">{container.status}</Typography>
+            </Box>
+          ))}
+          {containers.length === 0 && <Typography color="text.secondary">No container status returned.</Typography>}
+        </Stack>
+      </Paper>
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
+        <Typography variant="h6" gutterBottom>
+          Regression Run
+        </Typography>
+        {run ? (
+          <Stack spacing={1.5}>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Chip label={run.status.toUpperCase()} color={run.status === 'passed' ? 'success' : run.status === 'failed' ? 'error' : 'default'} />
+              <Chip label={`Exit: ${run.exitCode ?? 'running'}`} />
+              <Chip label={new Date(run.startedAt).toLocaleString()} />
+            </Stack>
+            <Box component="pre" sx={{ m: 0, p: 2, bgcolor: '#111827', color: '#f9fafb', overflow: 'auto', maxHeight: 360, borderRadius: 1, fontSize: 12 }}>
+              {run.logs.join('') || 'Waiting for output...'}
+            </Box>
+          </Stack>
+        ) : (
+          <Typography color="text.secondary">No regression run started from this session.</Typography>
+        )}
+      </Paper>
+    </Stack>
   );
 }
 
@@ -420,7 +578,7 @@ function CalendarPage() {
 
 function GuardedPage({ required, element }: { required: string; element: ReactElement }) {
   const { user } = useAuth();
-  if (!user || !navigationByRole[user.role].includes(required)) {
+  if (!user || !navigationByRole[user.role].includes(required) || (required === 'ops' && !opsEnabled)) {
     return <Navigate to="/access-denied" replace />;
   }
 

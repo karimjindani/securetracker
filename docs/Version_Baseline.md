@@ -71,3 +71,26 @@ Code reference:
 
 - Branch: `feat/v0.3.0-application-calendar`
 - Version: `0.3.0`
+
+## v0.3.1 - Regression Suite and Ops Console
+
+Status: Implemented on feature branch
+
+Baseline contents:
+
+- Playwright regression suite for platform, auth, RBAC, applications, and calendar.
+- Regression data cleanup and reset-to-seeded baseline scripts.
+- Local/dev Ops APIs for health, containers, regression runs, cleanup, and reset.
+- Frontend Ops Console route gated for System Admin users.
+
+Documentation references:
+
+- `docs/plans/v0.3.1-regression-ops-plan.md`
+- `docs/testing/regression-suite.md`
+- `docs/testing/v0.3.1-test-results.md`
+- `docs/user-guides/v0.3.1-ops-console-user-guide.md`
+
+Code reference:
+
+- Branch: `feat/v0.3.1-regression-ops`
+- Version: `0.3.1`

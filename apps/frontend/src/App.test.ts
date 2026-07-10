@@ -9,7 +9,9 @@ describe('frontend lifecycle contract', () => {
 
   it('shows admin navigation only for administrative roles', () => {
     expect(navigationByRole.SYSTEM_ADMIN).toContain('users');
+    expect(navigationByRole.SYSTEM_ADMIN).toContain('ops');
     expect(navigationByRole.AUDITOR).not.toContain('users');
+    expect(navigationByRole.AUDITOR).not.toContain('ops');
     expect(navigationByRole.AUDITOR).toContain('applications');
     expect(navigationByRole.AUDITOR).toContain('calendar');
   });

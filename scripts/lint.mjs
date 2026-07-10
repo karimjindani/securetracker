@@ -1,7 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-const roots = ['apps', 'packages', 'prisma', 'docs'];
+const roots = ['apps', 'packages', 'prisma', 'docs', 'scripts', 'tests'];
 const ignoredDirs = new Set(['node_modules', 'dist', '.git', 'coverage']);
 const sourceOnlyRules = [
   { pattern: /console\.log\([^)]*(password|token|secret)/i, message: 'Do not log secrets.' }

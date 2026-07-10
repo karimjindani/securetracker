@@ -828,6 +828,19 @@ PATCH /calendar/:id
 
 Application management is limited to System Admin and Paysys Security Admin. Calendar management is limited to System Admin, NBP Security Admin, and Paysys Security Admin. Calendar entries are VAPT engagements in `PLANNED` status only; full lifecycle status transitions are introduced after this baseline.
 
+## v0.3.1 Ops and Regression API Baseline
+
+```text
+GET /ops/health
+GET /ops/containers
+POST /ops/regression/run
+GET /ops/regression/runs/:id
+POST /ops/test-data/cleanup
+POST /ops/reset
+```
+
+Ops APIs are local/dev-only and require `OPS_ENABLED=true`, authenticated `SYSTEM_ADMIN` access, and normal JWT validation. Regression cleanup only removes data tagged with the configured regression prefix. Reset removes business workflow data and restores seeded organizations.
+
 ---
 
 # 14. Security Architecture

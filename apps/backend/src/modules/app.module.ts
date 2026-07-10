@@ -6,6 +6,7 @@ import { CalendarModule } from './calendar/calendar.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './health/health.module.js';
 import { OrganizationsModule } from './organizations/organizations.module.js';
+import { OpsModule } from './ops/ops.module.js';
 import { UsersModule } from './users/users.module.js';
 
 @Module({
@@ -17,6 +18,7 @@ import { UsersModule } from './users/users.module.js';
     ApplicationsModule,
     CalendarModule,
     OrganizationsModule,
+    OpsModule,
     UsersModule
   ]
 })
