@@ -290,7 +290,6 @@ Acceptance Criteria:
 Statuses:
 
 - Planned
-- NBP Scope Agreement
 - Paysys-Apprise Initiation
 - Apprise Assessment
 - Draft Report Uploaded
@@ -306,7 +305,6 @@ Statuses:
 
 Final governance sequence:
 
-- NBP Scope Agreement
 - Paysys-Apprise Initiation
 - Apprise Assessment
 - Draft Report Uploaded by Vendor
@@ -342,7 +340,7 @@ Acceptance Criteria:
 
 ## Objective
 
-Support formal scoping and initiation. NBP scope agreement is captured before Paysys initiates VAPT with Apprise / External VAPT Vendor, with Bank / NBP attendance optional for the first Paysys-Apprise initiation meeting.
+Support formal scoping and initiation. Paysys initiates VAPT with Apprise / External VAPT Vendor, with Bank / NBP attendance optional for the first Paysys-Apprise initiation meeting.
 
 Priority: P0
 
@@ -360,17 +358,16 @@ Acceptance Criteria:
 
 - Meeting date
 - Participants, including optional Bank / NBP attendees if present
-- NBP scope agreement captured for annual calendar and ad-hoc projects
 - Scope included
 - Scope excluded
 
 ---
 
-### US-017 Upload Scope Documents
+### US-017 Upload Scoping Attachments
 
 As a user,
 
-I want to upload scope documents,
+I want to upload scoping attachments,
 
 So that records are maintained.
 
@@ -378,7 +375,7 @@ Acceptance Criteria:
 
 - Multiple files supported
 
-Note: scope documents are stored with scoping records and are not listed as report repository document types.
+Note: scoping attachments are stored with scoping records and are not listed as report repository document types.
 
 ---
 
@@ -394,7 +391,6 @@ Acceptance Criteria:
 
 - Approval workflow
 - Audit trail
-- Scope must be agreed by NBP IS before Paysys-Apprise initiation
 
 ---
 

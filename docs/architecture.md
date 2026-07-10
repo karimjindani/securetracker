@@ -16,7 +16,7 @@ The VAPT Tracker Portal is designed as a secure, auditable, role-based collabora
 The architecture must support:
 
 - Annual VAPT calendar management
-- Engagement initiation and scoping, beginning with NBP scope agreement before Paysys and Apprise / External VAPT Vendor coordination while Bank / NBP attendance is optional for the first meeting
+- Engagement initiation and scoping, beginning with Paysys and Apprise / External VAPT Vendor coordination while Bank / NBP attendance is optional for the first meeting
 - Secure report repository
 - Password-protected PDF handling
 - Findings lifecycle tracking
@@ -182,7 +182,6 @@ Can:
 
 - View all engagements
 - Add new ad-hoc VAPT engagements and reports for mid-year projects
-- Approve initial scopes for annual calendar and ad-hoc VAPT work
 - View reports
 - Perform final review and closing meeting
 - Approve risk acceptance
@@ -198,7 +197,7 @@ Can:
 - Update engagement statuses except Closed
 - Move engagement status to Go-Live
 - Manage findings
-- Initiate VAPT with Apprise after NBP scope agreement
+- Initiate VAPT with Apprise
 - Assign findings
 - Upload remediation evidence
 - Request revalidation
@@ -333,7 +332,7 @@ Key fields:
 
 Stores scoping meeting details.
 
-NBP scope agreement is captured before Paysys initiates VAPT with Apprise / External VAPT Vendor. Bank / NBP attendance is optional for the first Paysys-Apprise initiation meeting and should be recorded in participants when present.
+The first Engagement Initiation meeting is between Paysys and Apprise / External VAPT Vendor. Bank / NBP attendance is optional and should be recorded in participants when present.
 
 Key fields:
 
@@ -627,8 +626,7 @@ No password value is ever recorded.
 ```mermaid
 stateDiagram-v2
     [*] --> Planned
-    Planned --> NBPScopeAgreement
-    NBPScopeAgreement --> PaysysAppriseInitiated
+    Planned --> PaysysAppriseInitiated
     PaysysAppriseInitiated --> AppriseAssessment
     AppriseAssessment --> DraftReportUploaded
     DraftReportUploaded --> PaysysTriage

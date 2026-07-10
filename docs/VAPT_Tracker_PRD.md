@@ -35,7 +35,6 @@ The VAPT Tracker Portal is a centralized platform used by NBP, Paysys Labs, and 
 ## NBP Security Administrator
 - Manage calendar
 - Add new ad-hoc VAPT engagements and reports for mid-year projects
-- Approve initial scope for annual calendar and ad-hoc VAPT work
 - View reports
 - Perform final review and closing meeting
 - Close engagements. This is the ONLY role authorized to mark an engagement as Closed.
@@ -47,7 +46,7 @@ The VAPT Tracker Portal is a centralized platform used by NBP, Paysys Labs, and 
 ## Paysys Security Administrator
 - Manage applications
 - Possesses full administrative rights across the portal to add ad-hoc projects and reports, update statuses, and manage findings, except the right to mark an engagement as Closed
-- Initiate VAPT with Apprise after NBP scope agreement
+- Initiate VAPT with Apprise
 - Assign findings
 - Upload remediation evidence
 - Request Apprise revalidation
@@ -97,7 +96,6 @@ Assessment Types:
 Lifecycle Status:
 
 - Planned
-- NBP Scope Agreement
 - Paysys-Apprise Initiation
 - Apprise Assessment
 - Draft Report Uploaded
@@ -115,20 +113,17 @@ Lifecycle Status:
 
 # Module 3: Engagement Initiation & Scoping
 
-The VAPT scope for annual calendar items and ad-hoc projects is formally agreed with NBP IS before vendor initiation.
-
 The first Engagement Initiation meeting is held between:
 
 - Paysys Labs
 - Apprise / External VAPT Vendor
 
-Bank / NBP attendance is optional for this first meeting because NBP scope agreement is captured as the prerequisite governance step.
+Bank / NBP attendance is optional for this first meeting.
 
 Capture:
 
 - Meeting Date
 - Participants, including optional Bank / NBP attendees if present
-- NBP Scope Agreement Status
 - Scope Included
 - Scope Excluded
 - Testing Window
@@ -139,7 +134,6 @@ Capture:
 
 Outputs:
 
-- Scope Document
 - Contact Matrix
 - Architecture Documents
 - Test Credentials
@@ -152,7 +146,6 @@ Outputs:
 Workflow:
 
 Annual Calendar
--> NBP Scope Agreement
 -> Paysys-Apprise Initiation
 -> Apprise Assessment
 -> Draft Report Uploaded by Vendor

@@ -267,7 +267,6 @@ Engagement status values:
 
 ```text
 PLANNED
-NBP_SCOPE_AGREED
 PAYSYS_APPRISE_INITIATED
 APPRISE_ASSESSMENT
 DRAFT_REPORT_UPLOADED
@@ -298,7 +297,7 @@ CREATE INDEX idx_engagement_vendor ON vapt_engagements(vendor_organization_id);
 
 ## 8.1 scoping_records
 
-Stores formal scoping meeting information. NBP scope agreement is captured before Paysys initiates VAPT with Apprise / External VAPT Vendor; Bank / NBP attendance is optional for the first Paysys-Apprise initiation meeting and can be captured in the participants field when present.
+Stores formal scoping meeting information. The first Engagement Initiation meeting is between Paysys and Apprise / External VAPT Vendor; Bank / NBP attendance is optional and can be captured in the participants field when present.
 
 | Column | Type | Required | Description |
 |---|---|---:|---|
@@ -675,7 +674,6 @@ BLACK_GREY
 
 ```text
 PLANNED
-NBP_SCOPE_AGREED
 PAYSYS_APPRISE_INITIATED
 APPRISE_ASSESSMENT
 DRAFT_REPORT_UPLOADED
