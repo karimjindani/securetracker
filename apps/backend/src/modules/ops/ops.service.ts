@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
@@ -25,7 +25,7 @@ export interface RegressionRun {
 export class OpsService {
   private readonly runs = new Map<string, RegressionRun>();
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async health() {
     const [database, frontend, keycloak, minio, smtp] = await Promise.all([
