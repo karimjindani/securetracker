@@ -1,0 +1,270 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrganizationType {
+  NBP
+  PAYSYS
+  VENDOR
+  AUDITOR
+}
+
+enum RecordStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum UserRole {
+  SYSTEM_ADMIN
+  NBP_SECURITY_ADMIN
+  NBP_VIEWER
+  PAYSYS_SECURITY_ADMIN
+  PAYSYS_DEVELOPER
+  VENDOR_ADMIN
+  AUDITOR
+}
+
+enum AssessmentType {
+  WHITEBOX
+  BLACK_GREY
+}
+
+enum EngagementStatus {
+  PLANNED
+  PAYSYS_APPRISE_INITIATED
+  APPRISE_ASSESSMENT
+  DRAFT_REPORT_UPLOADED
+  PAYSYS_TRIAGE
+  DEVELOPER_FIX
+  FIXED_PENDING_REVALIDATION
+  APPRISE_REVALIDATION
+  FINAL_REPORT_UPLOADED
+  PAYSYS_IS_REVIEW_AND_COMMENT
+  NBP_IS_REVIEW_CLOSING_MEETING
+  CLOSED
+  GO_LIVE
+  CANCELLED
+}
+
+enum ReportType {
+  DRAFT_REPORT
+  REVALIDATION_REPORT
+  FINAL_REPORT
+  RISK_ACCEPTANCE_DOCUMENT
+  EVIDENCE_DOCUMENT
+  ADDENDUM
+}
+
+enum FindingSeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFORMATIONAL
+}
+
+enum FindingStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  FIX_IMPLEMENTED
+  FIXED_PENDING_REVALIDATION
+  REVALIDATION_PASSED
+  REVALIDATION_FAILED
+  RISK_ACCEPTANCE_REQUESTED
+  RISK_ACCEPTED
+  CLOSED
+}
+
+model Organization {
+  id               String           @id @default(uuid()) @db.Uuid
+  name             String           @unique @db.VarChar(150)
+  organizationType OrganizationType
+  status           RecordStatus     @default(ACTIVE)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  users            User[]
+  vendorEngagements VaptEngagement[] @relation("VendorEngagements")
+}
+
+model User {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  keycloakUserId String        @unique @db.VarChar(150)
+  fullName       String        @db.VarChar(150)
+  email          String        @unique @db.VarChar(150)
+  role           UserRole
+  status         RecordStatus  @default(ACTIVE)
+  lastLoginAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  createdApplications Application[] @relation("ApplicationCreator")
+  createdEngagements  VaptEngagement[] @relation("EngagementCreator")
+  assignedFindings    Finding[] @relation("FindingAssignee")
+  auditLogs           AuditLog[]
+}
+
+model Application {
+  id                 String           @id @default(uuid()) @db.Uuid
+  name               String           @db.VarChar(200)
+  description        String?
+  businessOwnerName  String?          @db.VarChar(150)
+  technicalOwnerName String?          @db.VarChar(150)
+  environment        String           @db.VarChar(50)
+  url                String?
+  criticality        String           @db.VarChar(30)
+  technologyStack    String?
+  internetFacing     Boolean          @default(false)
+  status             RecordStatus     @default(ACTIVE)
+  createdById        String           @db.Uuid
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  createdBy          User             @relation("ApplicationCreator", fields: [createdById], references: [id])
+  engagements        VaptEngagement[]
+
+  @@index([status])
+  @@index([criticality])
+}
+
+model VaptEngagement {
+  id                   String           @id @default(uuid()) @db.Uuid
+  applicationId         String           @db.Uuid
+  title                 String           @db.VarChar(250)
+  assessmentType        AssessmentType
+  plannedStartDate      DateTime?
+  plannedEndDate        DateTime?
+  plannedMonth          String?          @db.VarChar(20)
+  plannedYear           Int
+  actualStartDate       DateTime?
+  actualEndDate         DateTime?
+  vendorOrganizationId  String?          @db.Uuid
+  status                EngagementStatus @default(PLANNED)
+  closureNotes          String?
+  closedById            String?          @db.Uuid
+  closedAt              DateTime?
+  createdById           String           @db.Uuid
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  application           Application      @relation(fields: [applicationId], references: [id])
+  vendorOrganization    Organization?    @relation("VendorEngagements", fields: [vendorOrganizationId], references: [id])
+  createdBy             User             @relation("EngagementCreator", fields: [createdById], references: [id])
+  scopingRecords        ScopingRecord[]
+  reports               Report[]
+  findings              Finding[]
+
+  @@index([applicationId])
+  @@index([plannedYear, plannedMonth])
+  @@index([status])
+  @@index([vendorOrganizationId])
+}
+
+model ScopingRecord {
+  id                 String         @id @default(uuid()) @db.Uuid
+  engagementId       String         @db.Uuid
+  meetingDate        DateTime
+  meetingTime        String?        @db.VarChar(20)
+  participants       String
+  minutes            String?
+  scopeIncluded      String
+  scopeExcluded      String?
+  testingWindowStart DateTime?
+  testingWindowEnd   DateTime?
+  testAccountsSummary String?
+  architectureSummary String?
+  recordStatus       RecordStatus   @default(ACTIVE)
+  createdById        String         @db.Uuid
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  engagement         VaptEngagement @relation(fields: [engagementId], references: [id])
+
+  @@index([engagementId])
+}
+
+model Report {
+  id             String          @id @default(uuid()) @db.Uuid
+  engagementId   String          @db.Uuid
+  reportType     ReportType
+  title          String          @db.VarChar(250)
+  description    String?
+  currentVersion Int             @default(1)
+  status         RecordStatus    @default(ACTIVE)
+  immutable      Boolean         @default(false)
+  createdById    String          @db.Uuid
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  engagement     VaptEngagement  @relation(fields: [engagementId], references: [id])
+  versions       ReportVersion[]
+}
+
+model ReportVersion {
+  id                  String      @id @default(uuid()) @db.Uuid
+  reportId            String      @db.Uuid
+  versionNumber       Int
+  fileName            String      @db.VarChar(255)
+  fileMimeType        String      @db.VarChar(100)
+  fileSizeBytes       BigInt
+  objectStorageKey    String
+  sha256Hash          String      @unique @db.VarChar(64)
+  isPasswordProtected Boolean     @default(false)
+  uploadedById        String      @db.Uuid
+  uploadedAt          DateTime    @default(now())
+  uploadNotes         String?
+  report              Report      @relation(fields: [reportId], references: [id])
+
+  @@unique([reportId, versionNumber])
+}
+
+model Finding {
+  id                    String          @id @default(uuid()) @db.Uuid
+  engagementId          String          @db.Uuid
+  sourceReportVersionId String?         @db.Uuid
+  findingReference      String          @db.VarChar(100)
+  title                 String          @db.VarChar(300)
+  description           String
+  impact                String?
+  recommendation        String?
+  severity              FindingSeverity
+  cvssScore             Decimal?        @db.Decimal(3, 1)
+  cwe                   String?         @db.VarChar(50)
+  owaspCategory         String?         @db.VarChar(100)
+  status                FindingStatus   @default(OPEN)
+  assignedToUserId      String?         @db.Uuid
+  dueDate               DateTime?
+  fixedAt               DateTime?
+  closedAt              DateTime?
+  closedById            String?         @db.Uuid
+  createdById           String          @db.Uuid
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  engagement            VaptEngagement  @relation(fields: [engagementId], references: [id])
+  assignedTo            User?           @relation("FindingAssignee", fields: [assignedToUserId], references: [id])
+
+  @@index([engagementId])
+  @@index([status])
+  @@index([severity])
+  @@index([assignedToUserId])
+  @@index([dueDate])
+}
+
+model AuditLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String?  @db.Uuid
+  organizationId String?  @db.Uuid
+  action         String   @db.VarChar(120)
+  entityType     String   @db.VarChar(80)
+  entityId       String?  @db.Uuid
+  oldValue       Json?
+  newValue       Json?
+  remarks        String?
+  ipAddress      String?  @db.VarChar(80)
+  userAgent      String?
+  createdAt      DateTime @default(now())
+  user           User?    @relation(fields: [userId], references: [id])
+}

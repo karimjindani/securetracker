@@ -1,0 +1,52 @@
+export const roles = [
+  'SYSTEM_ADMIN',
+  'NBP_SECURITY_ADMIN',
+  'NBP_VIEWER',
+  'PAYSYS_SECURITY_ADMIN',
+  'PAYSYS_DEVELOPER',
+  'VENDOR_ADMIN',
+  'AUDITOR'
+] as const;
+
+export type Role = typeof roles[number];
+
+export const engagementStatuses = [
+  'PLANNED',
+  'PAYSYS_APPRISE_INITIATED',
+  'APPRISE_ASSESSMENT',
+  'DRAFT_REPORT_UPLOADED',
+  'PAYSYS_TRIAGE',
+  'DEVELOPER_FIX',
+  'FIXED_PENDING_REVALIDATION',
+  'APPRISE_REVALIDATION',
+  'FINAL_REPORT_UPLOADED',
+  'PAYSYS_IS_REVIEW_AND_COMMENT',
+  'NBP_IS_REVIEW_CLOSING_MEETING',
+  'CLOSED',
+  'GO_LIVE',
+  'CANCELLED'
+] as const;
+
+export type EngagementStatus = typeof engagementStatuses[number];
+
+export const findingStatuses = [
+  'OPEN',
+  'ASSIGNED',
+  'IN_PROGRESS',
+  'FIX_IMPLEMENTED',
+  'FIXED_PENDING_REVALIDATION',
+  'REVALIDATION_PASSED',
+  'REVALIDATION_FAILED',
+  'RISK_ACCEPTANCE_REQUESTED',
+  'RISK_ACCEPTED',
+  'CLOSED'
+] as const;
+
+export type FindingStatus = typeof findingStatuses[number];
+
+export const assessmentTypes = ['WHITEBOX', 'BLACK_GREY'] as const;
+export type AssessmentType = typeof assessmentTypes[number];
+
+export const canCloseEngagement = (role: Role): boolean => role === 'NBP_SECURITY_ADMIN';
+
+export const canMoveToGoLive = (role: Role): boolean => role === 'PAYSYS_SECURITY_ADMIN';

@@ -130,7 +130,7 @@ Capture:
 - Test Accounts
 - Assessment Type
 - Minutes of Meeting
-- Approval Status
+- Record Status
 
 Outputs:
 
