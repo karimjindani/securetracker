@@ -25,7 +25,7 @@ type AuthState =
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
 const keycloak = new Keycloak({
-  url: import.meta.env.VITE_KEYCLOAK_URL ?? 'http://localhost:8080',
+  url: import.meta.env.VITE_KEYCLOAK_URL ?? 'http://localhost:18080',
   realm: import.meta.env.VITE_KEYCLOAK_REALM ?? 'securetracker',
   clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID ?? 'securetracker-web'
 });
