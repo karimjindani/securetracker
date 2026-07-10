@@ -18,6 +18,11 @@ async function main() {
     update: {},
     create: { name: 'Apprise', organizationType: 'VENDOR' }
   });
+  await prisma.organization.upsert({
+    where: { name: 'Auditor' },
+    update: {},
+    create: { name: 'Auditor', organizationType: 'AUDITOR' }
+  });
 }
 
 main()

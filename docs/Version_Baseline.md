@@ -2,7 +2,7 @@
 
 ## v0.1.0 - Scaffold and Dev Platform
 
-Status: In progress
+Status: Implemented on feature branch
 
 Baseline contents:
 
@@ -25,3 +25,26 @@ Code reference:
 
 - Branch: `feat/v0.1.0-scaffold`
 - Version: `0.1.0`
+
+## v0.2.0 - Authentication, Organizations, Users, RBAC
+
+Status: Implemented on feature branch
+
+Baseline contents:
+
+- Keycloak development realm import with local demo users.
+- JWT validation and `/me` profile mapping.
+- Backend RBAC guards and role decorators.
+- Organizations and users APIs with audit records for writes.
+- Frontend Keycloak login/logout shell and role-aware navigation.
+
+Documentation references:
+
+- `docs/plans/v0.2.0-auth-rbac-plan.md`
+- `docs/testing/v0.2.0-test-results.md`
+- `docs/user-guides/v0.2.0-auth-rbac-user-guide.md`
+
+Code reference:
+
+- Branch: `feat/v0.2.0-auth-rbac`
+- Version: `0.2.0`

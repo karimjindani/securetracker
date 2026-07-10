@@ -20,6 +20,13 @@ Generate the Prisma client:
 npm.cmd run db:generate
 ```
 
+Apply the local development schema and seed reference organizations:
+
+```powershell
+npm.cmd run db:push
+npm.cmd run db:seed
+```
+
 Start local infrastructure:
 
 ```powershell
@@ -44,9 +51,19 @@ npm.cmd run dev:frontend
 |---|---|
 | Frontend | `http://localhost:5173` |
 | Backend health | `http://localhost:3000/health` |
-| Keycloak | `http://localhost:8080` |
+| Keycloak | `http://localhost:18080` |
 | MinIO console | `http://localhost:9001` |
 | SMTP test UI | `http://localhost:8025` |
+
+## Keycloak Development Realm
+
+The local Keycloak service imports:
+
+```text
+docker/keycloak/securetracker-realm.json
+```
+
+The realm name is `securetracker` and the public frontend client is `securetracker-web`.
 
 ## Secrets
 

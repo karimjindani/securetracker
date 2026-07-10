@@ -800,6 +800,20 @@ Dashboards should be generated from PostgreSQL views or backend aggregation APIs
 - Pagination required for list APIs
 - Search and filters required for findings and engagements
 
+## v0.2.0 Auth API Baseline
+
+```text
+GET /me
+GET /organizations
+POST /organizations
+PATCH /organizations/:id
+GET /users
+POST /users
+PATCH /users/:id
+```
+
+JWTs are validated against the Keycloak realm issuer and JWKS endpoint. Local users are synchronized from token claims and mapped to organizations in PostgreSQL.
+
 ---
 
 # 14. Security Architecture

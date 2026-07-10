@@ -10,6 +10,9 @@ export const roles = [
 
 export type Role = typeof roles[number];
 
+export const organizationTypes = ['NBP', 'PAYSYS', 'VENDOR', 'AUDITOR'] as const;
+export type OrganizationType = typeof organizationTypes[number];
+
 export const engagementStatuses = [
   'PLANNED',
   'PAYSYS_APPRISE_INITIATED',
@@ -50,3 +53,21 @@ export type AssessmentType = typeof assessmentTypes[number];
 export const canCloseEngagement = (role: Role): boolean => role === 'NBP_SECURITY_ADMIN';
 
 export const canMoveToGoLive = (role: Role): boolean => role === 'PAYSYS_SECURITY_ADMIN';
+
+export const isReadOnlyRole = (role: Role): boolean => role === 'NBP_VIEWER' || role === 'AUDITOR';
+
+export const canManageOrganizations = (role: Role): boolean => role === 'SYSTEM_ADMIN';
+
+export const canManageUsers = (role: Role): boolean => role === 'SYSTEM_ADMIN';
+
+export const navigationByRole: Record<Role, string[]> = {
+  SYSTEM_ADMIN: ['dashboard', 'organizations', 'users'],
+  NBP_SECURITY_ADMIN: ['dashboard', 'organizations', 'users'],
+  NBP_VIEWER: ['dashboard'],
+  PAYSYS_SECURITY_ADMIN: ['dashboard', 'organizations', 'users'],
+  PAYSYS_DEVELOPER: ['dashboard'],
+  VENDOR_ADMIN: ['dashboard'],
+  AUDITOR: ['dashboard']
+};
+
+export const isRole = (value: string): value is Role => roles.includes(value as Role);
