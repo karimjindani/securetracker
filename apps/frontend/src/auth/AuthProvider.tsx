@@ -30,14 +30,20 @@ const keycloak = new Keycloak({
   clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID ?? 'securetracker-web'
 });
 
+let keycloakInitPromise: Promise<boolean> | undefined;
+
+function initializeKeycloak() {
+  keycloakInitPromise ??= keycloak.init({ onLoad: 'check-sso', pkceMethod: 'S256' });
+  return keycloakInitPromise;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState['status']>('loading');
   const [user, setUser] = useState<AuthenticatedUser | undefined>();
 
   useEffect(() => {
     let mounted = true;
-    keycloak
-      .init({ onLoad: 'check-sso', pkceMethod: 'S256' })
+    initializeKeycloak()
       .then(async (authenticated) => {
         if (!mounted) return;
         if (!authenticated || !keycloak.token) {
@@ -65,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AuthState>(() => {
     const login = () => {
-      void keycloak.login();
+      void keycloak.login({ redirectUri: window.location.href });
     };
     const logout = () => {
       void keycloak.logout({ redirectUri: window.location.origin });
