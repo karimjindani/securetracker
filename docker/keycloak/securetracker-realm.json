@@ -1,0 +1,115 @@
+{
+  "realm": "securetracker",
+  "enabled": true,
+  "roles": {
+    "realm": [
+      { "name": "SYSTEM_ADMIN" },
+      { "name": "NBP_SECURITY_ADMIN" },
+      { "name": "NBP_VIEWER" },
+      { "name": "PAYSYS_SECURITY_ADMIN" },
+      { "name": "PAYSYS_DEVELOPER" },
+      { "name": "VENDOR_ADMIN" },
+      { "name": "AUDITOR" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "securetracker-web",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "redirectUris": ["http://localhost:5173/*"],
+      "webOrigins": ["http://localhost:5173"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "system.admin",
+      "email": "system.admin@example.local",
+      "firstName": "System",
+      "lastName": "Admin",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": {
+        "organization_name": ["Platform"],
+        "organization_type": ["AUDITOR"]
+      },
+      "credentials": [{ "type": "password", "value": "ChangeMe123!", "temporary": false }],
+      "realmRoles": ["SYSTEM_ADMIN"]
+    },
+    {
+      "username": "nbp.admin",
+      "email": "nbp.admin@example.local",
+      "firstName": "NBP",
+      "lastName": "Admin",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": {
+        "organization_name": ["NBP"],
+        "organization_type": ["NBP"]
+      },
+      "credentials": [{ "type": "password", "value": "ChangeMe123!", "temporary": false }],
+      "realmRoles": ["NBP_SECURITY_ADMIN"]
+    },
+    {
+      "username": "paysys.admin",
+      "email": "paysys.admin@example.local",
+      "firstName": "Paysys",
+      "lastName": "Admin",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": {
+        "organization_name": ["Paysys Labs"],
+        "organization_type": ["PAYSYS"]
+      },
+      "credentials": [{ "type": "password", "value": "ChangeMe123!", "temporary": false }],
+      "realmRoles": ["PAYSYS_SECURITY_ADMIN"]
+    },
+    {
+      "username": "paysys.dev",
+      "email": "paysys.dev@example.local",
+      "firstName": "Paysys",
+      "lastName": "Developer",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": {
+        "organization_name": ["Paysys Labs"],
+        "organization_type": ["PAYSYS"]
+      },
+      "credentials": [{ "type": "password", "value": "ChangeMe123!", "temporary": false }],
+      "realmRoles": ["PAYSYS_DEVELOPER"]
+    },
+    {
+      "username": "apprise.vendor",
+      "email": "apprise.vendor@example.local",
+      "firstName": "Apprise",
+      "lastName": "Vendor",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": {
+        "organization_name": ["Apprise"],
+        "organization_type": ["VENDOR"]
+      },
+      "credentials": [{ "type": "password", "value": "ChangeMe123!", "temporary": false }],
+      "realmRoles": ["VENDOR_ADMIN"]
+    },
+    {
+      "username": "auditor",
+      "email": "auditor@example.local",
+      "firstName": "External",
+      "lastName": "Auditor",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": {
+        "organization_name": ["Auditor"],
+        "organization_type": ["AUDITOR"]
+      },
+      "credentials": [{ "type": "password", "value": "ChangeMe123!", "temporary": false }],
+      "realmRoles": ["AUDITOR"]
+    }
+  ]
+}

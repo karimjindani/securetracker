@@ -161,6 +161,8 @@ UNIQUE (name)
 
 Stores portal users mapped with Keycloak users.
 
+In `v0.2.0`, users are synchronized from authenticated Keycloak token claims on API access.
+
 | Column | Type | Required | Description |
 |---|---|---:|---|
 | id | UUID | Yes | Primary key |

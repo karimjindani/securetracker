@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { canCloseEngagement, canMoveToGoLive, engagementStatuses } from './securetracker.enums.js';
+import {
+  canCloseEngagement,
+  canManageOrganizations,
+  canMoveToGoLive,
+  engagementStatuses,
+  navigationByRole
+} from './securetracker.enums.js';
 
 describe('securetracker shared enums', () => {
   it('keeps the documented engagement lifecycle order', () => {
@@ -16,5 +22,11 @@ describe('securetracker shared enums', () => {
     expect(canCloseEngagement('NBP_SECURITY_ADMIN')).toBe(true);
     expect(canCloseEngagement('PAYSYS_SECURITY_ADMIN')).toBe(false);
     expect(canMoveToGoLive('PAYSYS_SECURITY_ADMIN')).toBe(true);
+  });
+
+  it('limits administration helpers and navigation', () => {
+    expect(canManageOrganizations('SYSTEM_ADMIN')).toBe(true);
+    expect(canManageOrganizations('AUDITOR')).toBe(false);
+    expect(navigationByRole.AUDITOR).toEqual(['dashboard']);
   });
 });

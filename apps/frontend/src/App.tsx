@@ -1,14 +1,23 @@
-import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
-import FactCheckIcon from '@mui/icons-material/FactCheck';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import BusinessIcon from '@mui/icons-material/Business';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import LogoutIcon from '@mui/icons-material/Logout';
+import PeopleIcon from '@mui/icons-material/People';
 import SecurityIcon from '@mui/icons-material/Security';
-import TimelineIcon from '@mui/icons-material/Timeline';
 import {
+  Alert,
   AppBar,
   Box,
+  Button,
   Chip,
+  CircularProgress,
   Container,
   CssBaseline,
-  Grid,
+  Divider,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
   Paper,
   Stack,
   ThemeProvider,
@@ -16,7 +25,9 @@ import {
   Typography,
   createTheme
 } from '@mui/material';
-import { engagementStatuses } from '@securetracker/shared';
+import { navigationByRole, type Role } from '@securetracker/shared';
+import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { AuthProvider, useAuth } from './auth/AuthProvider.js';
 
 const theme = createTheme({
   palette: {
@@ -28,63 +39,167 @@ const theme = createTheme({
   shape: { borderRadius: 6 },
   typography: {
     fontFamily: 'Inter, Segoe UI, Arial, sans-serif',
-    h4: { fontWeight: 700 },
+    h5: { fontWeight: 700 },
     h6: { fontWeight: 700 }
   }
 });
 
-const cards = [
-  { label: 'Lifecycle', value: `${engagementStatuses.length} statuses`, icon: <TimelineIcon /> },
-  { label: 'Closure Rule', value: 'NBP only', icon: <FactCheckIcon /> },
-  { label: 'Reports', value: 'Encrypted PDFs', icon: <SecurityIcon /> },
-  { label: 'Audit', value: 'Append-only', icon: <AssignmentTurnedInIcon /> }
+const navigation = [
+  { id: 'dashboard', label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
+  { id: 'organizations', label: 'Organizations', path: '/organizations', icon: <BusinessIcon /> },
+  { id: 'users', label: 'Users', path: '/users', icon: <PeopleIcon /> }
 ];
 
 export function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
+      <BrowserRouter>
+        <AuthProvider>
+          <Routes>
+            <Route path="/access-denied" element={<AccessDenied />} />
+            <Route path="/*" element={<ProtectedShell />} />
+          </Routes>
+        </AuthProvider>
+      </BrowserRouter>
+    </ThemeProvider>
+  );
+}
+
+function ProtectedShell() {
+  const auth = useAuth();
+  const location = useLocation();
+
+  if (auth.status === 'loading') {
+    return <LoadingState />;
+  }
+
+  if (auth.status === 'anonymous') {
+    return <LoginScreen onLogin={auth.login} />;
+  }
+
+  const allowedNavigation = navigation.filter((item) => navigationByRole[auth.user.role].includes(item.id));
+
+  return (
+    <>
       <AppBar position="static" color="primary" elevation={0}>
         <Toolbar>
           <SecurityIcon sx={{ mr: 1.5 }} />
-          <Typography variant="h6">SecureTracker</Typography>
+          <Typography variant="h6" sx={{ flexGrow: 1 }}>
+            SecureTracker
+          </Typography>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Chip label={auth.user.role.replaceAll('_', ' ')} size="small" color="secondary" />
+            <Button color="inherit" startIcon={<LogoutIcon />} onClick={auth.logout}>
+              Logout
+            </Button>
+          </Stack>
         </Toolbar>
       </AppBar>
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Stack spacing={3}>
-          <Box>
-            <Typography variant="h4" gutterBottom>
-              VAPT Tracker Portal
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '260px 1fr' }, minHeight: 'calc(100vh - 64px)' }}>
+        <Paper square variant="outlined" sx={{ borderTop: 0, borderBottom: 0 }}>
+          <List>
+            {allowedNavigation.map((item) => (
+              <ListItemButton
+                key={item.id}
+                component={Link}
+                to={item.path}
+                selected={location.pathname === item.path}
+              >
+                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.label} />
+              </ListItemButton>
+            ))}
+          </List>
+          <Divider />
+          <Box sx={{ p: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              {auth.user.fullName}
             </Typography>
-            <Typography color="text.secondary">
-              v0.1.0 foundation for the NBP, Paysys, and Apprise VAPT workflow.
+            <Typography variant="caption" color="text.secondary">
+              {auth.user.organizationName}
             </Typography>
           </Box>
-          <Grid container spacing={2}>
-            {cards.map((card) => (
-              <Grid key={card.label} size={{ xs: 12, sm: 6, md: 3 }}>
-                <Paper sx={{ p: 2.5, minHeight: 132 }} variant="outlined">
-                  <Stack spacing={1.5}>
-                    <Box color="primary.main">{card.icon}</Box>
-                    <Typography variant="h6">{card.label}</Typography>
-                    <Typography color="text.secondary">{card.value}</Typography>
-                  </Stack>
-                </Paper>
-              </Grid>
-            ))}
-          </Grid>
-          <Paper sx={{ p: 2.5 }} variant="outlined">
-            <Typography variant="h6" gutterBottom>
-              Engagement Lifecycle
-            </Typography>
-            <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
-              {engagementStatuses.filter((status) => status !== 'CANCELLED').map((status) => (
-                <Chip key={status} label={status.replaceAll('_', ' ')} size="small" />
-              ))}
-            </Stack>
-          </Paper>
+        </Paper>
+        <Container maxWidth="lg" sx={{ py: 4 }}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard role={auth.user.role} />} />
+            <Route path="/organizations" element={<RestrictedPage required="organizations" title="Organizations" />} />
+            <Route path="/users" element={<RestrictedPage required="users" title="Users" />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </Container>
+      </Box>
+    </>
+  );
+}
+
+function Dashboard({ role }: { role: Role }) {
+  return (
+    <Stack spacing={3}>
+      <Box>
+        <Typography variant="h5">Security Dashboard</Typography>
+        <Typography color="text.secondary">Authentication and RBAC baseline for v0.2.0.</Typography>
+      </Box>
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
+        <Typography variant="h6" gutterBottom>
+          Active Access Profile
+        </Typography>
+        <Typography color="text.secondary">
+          Navigation is filtered for {role.replaceAll('_', ' ')}. API guards remain the source of truth.
+        </Typography>
+      </Paper>
+    </Stack>
+  );
+}
+
+function RestrictedPage({ required, title }: { required: string; title: string }) {
+  const { user } = useAuth();
+  if (!user || !navigationByRole[user.role].includes(required)) {
+    return <Navigate to="/access-denied" replace />;
+  }
+
+  return (
+    <Stack spacing={2}>
+      <Typography variant="h5">{title}</Typography>
+      <Alert severity="info">API-backed {title.toLowerCase()} management lands in this v0.2.0 baseline.</Alert>
+    </Stack>
+  );
+}
+
+function AccessDenied() {
+  return (
+    <Container maxWidth="sm" sx={{ py: 8 }}>
+      <Alert severity="warning">Access denied for the current role.</Alert>
+    </Container>
+  );
+}
+
+function LoadingState() {
+  return (
+    <Stack alignItems="center" justifyContent="center" sx={{ minHeight: '100vh' }} spacing={2}>
+      <CircularProgress />
+      <Typography color="text.secondary">Loading SecureTracker session...</Typography>
+    </Stack>
+  );
+}
+
+function LoginScreen({ onLogin }: { onLogin: () => void }) {
+  return (
+    <Container maxWidth="sm" sx={{ py: 8 }}>
+      <Paper variant="outlined" sx={{ p: 4 }}>
+        <Stack spacing={3}>
+          <AdminPanelSettingsIcon color="primary" fontSize="large" />
+          <Box>
+            <Typography variant="h5">SecureTracker Login</Typography>
+            <Typography color="text.secondary">Sign in with Keycloak to access the VAPT tracker.</Typography>
+          </Box>
+          <Button variant="contained" onClick={onLogin}>
+            Login with Keycloak
+          </Button>
         </Stack>
-      </Container>
-    </ThemeProvider>
+      </Paper>
+    </Container>
   );
 }
