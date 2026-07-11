@@ -299,7 +299,7 @@ function Dashboard({ role }: { role: Role }) {
     <Stack spacing={3}>
       <Box>
         <Typography variant="h5">Security Dashboard</Typography>
-        <Typography color="text.secondary">Application inventory, VAPT calendar, and engagement workflow baseline for v0.4.0.</Typography>
+        <Typography color="text.secondary">Application inventory, VAPT calendar, engagements, and report repository baseline for v0.5.0.</Typography>
       </Box>
       <Paper variant="outlined" sx={{ p: 2.5 }}>
         <Typography variant="h6" gutterBottom>

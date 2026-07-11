@@ -27,6 +27,8 @@ These are documented local gates for now. They should be added to CI once epheme
 
 Starting in `v0.4.0`, regression also covers engagement initiation, scoping finalization, NBP-only closure, and Paysys Go-Live transition checks.
 
+Starting in `v0.5.0`, regression also covers report upload/download, protected PDF detection, report upload RBAC, and report cleanup/reset behavior.
+
 ## Security Scanning
 
 Security scanning is targeted for a later hardening baseline:
