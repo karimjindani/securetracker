@@ -210,7 +210,7 @@ Stores the applications/services covered under the VAPT calendar.
 | description | TEXT | No | Application description |
 | business_owner_name | VARCHAR(150) | No | Business owner |
 | technical_owner_name | VARCHAR(150) | No | Technical owner |
-| environment | VARCHAR(50) | Yes | PROD, UAT, PRE_PROD, DEV |
+| environment | VARCHAR(50) | Yes | PRODUCTION, STAGING, UAT, DEVELOPMENT |
 | url | TEXT | No | Application URL |
 | criticality | VARCHAR(30) | Yes | CRITICAL, HIGH, MEDIUM, LOW |
 | technology_stack | TEXT | No | Technology summary |
@@ -382,18 +382,18 @@ UNIQUE (sha256_hash)
 
 Security note: do not store PDF passwords.
 
-## 9.3 report_access_logs
+v0.5.0 implementation note: `reports.created_by` and `report_versions.uploaded_by` are foreign keys to users. Report version responses expose file size as a string to avoid JSON precision loss for BIGINT values.
 
-Tracks report viewing and downloading.
+## 9.3 report access audit events
+
+Report viewing and downloading are recorded in the central audit log instead of a separate access-log table in the v0.5.0 implementation.
 
 | Column | Type | Required | Description |
 |---|---|---:|---|
-| id | UUID | Yes | Primary key |
-| report_version_id | UUID | Yes | FK to report_versions |
-| user_id | UUID | Yes | FK to users |
-| action | VARCHAR(50) | Yes | VIEW_REQUESTED, VIEW_SUCCESS, VIEW_FAILED, DOWNLOADED |
-| success | BOOLEAN | Yes | Whether action succeeded |
-| failure_reason | VARCHAR(150) | No | Generic reason only |
+| action | VARCHAR(100) | Yes | `REPORT_UPLOADED`, `REPORT_VERSION_UPLOADED`, `REPORT_VIEWED`, or `REPORT_DOWNLOADED` |
+| entity_type | VARCHAR(100) | Yes | `REPORT` or `REPORT_VERSION` |
+| entity_id | UUID | Yes | Report or report version identifier |
+| new_value | JSONB | No | Sanitized metadata only; no PDF passwords |
 | ip_address | VARCHAR(80) | No | User IP |
 | user_agent | TEXT | No | Browser info |
 | created_at | TIMESTAMP | Yes | Timestamp |
@@ -601,13 +601,16 @@ Common audit actions:
 
 ```text
 USER_LOGIN
+APPLICATION_CREATED
+APPLICATION_UPDATED
+CALENDAR_ENTRY_CREATED
+CALENDAR_ENTRY_UPDATED
 ENGAGEMENT_CREATED
 SCOPING_RECORD_CREATED
 SCOPING_RECORD_UPDATED
 REPORT_UPLOADED
-REPORT_VIEW_REQUESTED
-REPORT_VIEW_SUCCESS
-REPORT_VIEW_FAILED
+REPORT_VERSION_UPLOADED
+REPORT_VIEWED
 REPORT_DOWNLOADED
 FINDING_CREATED
 FINDING_ASSIGNED
@@ -624,6 +627,36 @@ ENGAGEMENT_CLOSED
 ```
 
 Security note: never log passwords, PDF passwords, access tokens, API keys, or secrets.
+
+## 15.2 Regression Data Lifecycle
+
+Regression-generated data must use the configured prefix, defaulting to:
+
+```text
+REGRESSION_
+```
+
+Cleanup removes only regression-prefixed application/calendar data and directly related records. Reset removes business workflow records and restores seeded organizations.
+
+## v0.4.0 Seeded Workflow Baseline
+
+Reset now restores baseline organizations, local demo users, seeded applications, seeded engagements, and scoping records.
+
+Seeded applications:
+
+- `Seeded Core Banking Portal`
+- `Seeded Mobile Banking API`
+- `Seeded Internet Banking Web`
+
+Seeded engagement statuses:
+
+- `PLANNED`
+- `PAYSYS_APPRISE_INITIATED`
+- `APPRISE_ASSESSMENT`
+- `NBP_IS_REVIEW_CLOSING_MEETING`
+- `CLOSED`
+
+Scoping records now use `ScopingRecordStatus` with `DRAFT` and `FINAL`. Final scoping records include finalization metadata. Scoping records are not formal Scope Documents and do not store passwords.
 
 ---
 

@@ -12,17 +12,30 @@ interface AuthenticatedUser {
 }
 
 type AuthState =
-  | { status: 'loading'; user?: undefined; login: () => void; logout: () => void }
-  | { status: 'anonymous'; user?: undefined; login: () => void; logout: () => void }
-  | { status: 'authenticated'; user: AuthenticatedUser; login: () => void; logout: () => void };
+  | { status: 'loading'; user?: undefined; login: () => void; logout: () => void; apiFetch: typeof fetch }
+  | { status: 'anonymous'; user?: undefined; login: () => void; logout: () => void; apiFetch: typeof fetch }
+  | {
+      status: 'authenticated';
+      user: AuthenticatedUser;
+      login: () => void;
+      logout: () => void;
+      apiFetch: typeof fetch;
+    };
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
 const keycloak = new Keycloak({
-  url: import.meta.env.VITE_KEYCLOAK_URL ?? 'http://localhost:8080',
+  url: import.meta.env.VITE_KEYCLOAK_URL ?? 'http://localhost:18080',
   realm: import.meta.env.VITE_KEYCLOAK_REALM ?? 'securetracker',
   clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID ?? 'securetracker-web'
 });
+
+let keycloakInitPromise: Promise<boolean> | undefined;
+
+function initializeKeycloak() {
+  keycloakInitPromise ??= keycloak.init({ onLoad: 'check-sso', pkceMethod: 'S256' });
+  return keycloakInitPromise;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState['status']>('loading');
@@ -30,8 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    keycloak
-      .init({ onLoad: 'check-sso', pkceMethod: 'S256' })
+    initializeKeycloak()
       .then(async (authenticated) => {
         if (!mounted) return;
         if (!authenticated || !keycloak.token) {
@@ -59,13 +71,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AuthState>(() => {
     const login = () => {
-      void keycloak.login();
+      void keycloak.login({ redirectUri: window.location.href });
     };
     const logout = () => {
       void keycloak.logout({ redirectUri: window.location.origin });
     };
-    if (state === 'authenticated' && user) return { status: state, user, login, logout };
-    return { status: state, login, logout } as AuthState;
+    const apiFetch: typeof fetch = (input, init) => {
+      const headers = new Headers(init?.headers);
+      if (keycloak.token) headers.set('Authorization', `Bearer ${keycloak.token}`);
+      return fetch(input, { ...init, headers });
+    };
+    if (state === 'authenticated' && user) return { status: state, user, login, logout, apiFetch };
+    return { status: state, login, logout, apiFetch } as AuthState;
   }, [state, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

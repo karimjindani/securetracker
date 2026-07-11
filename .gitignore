@@ -9,3 +9,5 @@ coverage/
 *.log
 uploads/
 tmp/
+playwright-report/
+test-results/

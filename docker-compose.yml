@@ -45,12 +45,28 @@ services:
       target: backend
     env_file:
       - .env.example
+    environment:
+      DATABASE_URL: postgresql://securetracker:securetracker@postgres:5432/securetracker?schema=public
+      KEYCLOAK_ISSUER_URL: http://localhost:18080/realms/securetracker
+      KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/securetracker/protocol/openid-connect/certs
+      MINIO_ENDPOINT: minio
+      SMTP_HOST: smtp-test-service
     depends_on:
       - postgres
       - keycloak
       - minio
     ports:
       - "3000:3000"
+
+  frontend:
+    build:
+      context: .
+      target: frontend
+    depends_on:
+      - backend-api
+      - keycloak
+    ports:
+      - "5173:80"
 
 volumes:
   postgres-data:

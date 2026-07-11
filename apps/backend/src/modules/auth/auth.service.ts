@@ -23,7 +23,8 @@ export class AuthService {
   constructor(@Inject(ConfigService) private readonly config: ConfigService) {
     this.issuerUrl = this.config.get<string>('KEYCLOAK_ISSUER_URL') ?? 'http://localhost:8080/realms/securetracker';
     this.clientId = this.config.get<string>('KEYCLOAK_CLIENT_ID') ?? 'securetracker-web';
-    this.jwks = createRemoteJWKSet(new URL(`${this.issuerUrl}/protocol/openid-connect/certs`));
+    const jwksUrl = this.config.get<string>('KEYCLOAK_JWKS_URL') ?? `${this.issuerUrl}/protocol/openid-connect/certs`;
+    this.jwks = createRemoteJWKSet(new URL(jwksUrl));
   }
 
   async validateAuthorizationHeader(authorization?: string): Promise<TokenUser> {

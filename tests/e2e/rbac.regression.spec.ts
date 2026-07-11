@@ -1,0 +1,90 @@
+import { expect, test } from '@playwright/test';
+import { apiFor } from '../support/api-client.js';
+import { regressionName } from '../support/factories.js';
+import { seededUsers } from '../support/seeded-users.js';
+import { isReachable, testConfig } from '../support/test-config.js';
+
+test.beforeEach(async () => {
+  test.skip(!(await isReachable(`${testConfig.apiBaseUrl}/health`)), 'Backend is not running.');
+});
+
+test('organization and user writes are restricted to System Admin', async () => {
+  const systemApi = await apiFor(seededUsers.systemAdmin);
+  const auditorApi = await apiFor(seededUsers.auditor);
+
+  const organization = await systemApi.post('/organizations', {
+    data: { name: regressionName('ORG'), organizationType: 'AUDITOR' }
+  });
+  expect(organization.ok(), await organization.text()).toBe(true);
+
+  const forbiddenOrganization = await auditorApi.post('/organizations', {
+    data: { name: regressionName('AUDITOR_ORG'), organizationType: 'AUDITOR' }
+  });
+  expect(forbiddenOrganization.status()).toBe(403);
+
+  await systemApi.dispose();
+  await auditorApi.dispose();
+});
+
+test('application and calendar permissions follow documented roles', async () => {
+  const paysysApi = await apiFor(seededUsers.paysysAdmin);
+  const nbpApi = await apiFor(seededUsers.nbpAdmin);
+  const auditorApi = await apiFor(seededUsers.auditor);
+
+  const application = await paysysApi.post('/applications', {
+    data: {
+      name: regressionName('APP'),
+      environment: 'PRODUCTION',
+      criticality: 'HIGH',
+      internetFacing: true
+    }
+  });
+  expect(application.ok(), await application.text()).toBe(true);
+  const applicationBody = (await application.json()) as { id: string };
+
+  const auditorApplication = await auditorApi.post('/applications', {
+    data: {
+      name: regressionName('AUDITOR_APP'),
+      environment: 'PRODUCTION',
+      criticality: 'LOW'
+    }
+  });
+  expect(auditorApplication.status()).toBe(403);
+
+  const calendarEntry = await nbpApi.post('/calendar', {
+    data: {
+      applicationId: applicationBody.id,
+      title: regressionName('CALENDAR'),
+      assessmentType: 'WHITEBOX',
+      plannedYear: new Date().getFullYear(),
+      plannedMonth: 'July'
+    }
+  });
+  expect(calendarEntry.ok(), await calendarEntry.text()).toBe(true);
+
+  const invalidCalendarEntry = await nbpApi.post('/calendar', {
+    data: {
+      applicationId: applicationBody.id,
+      title: regressionName('INVALID_CALENDAR'),
+      assessmentType: 'WHITEBOX',
+      plannedYear: new Date().getFullYear(),
+      plannedStartDate: '2026-07-20',
+      plannedEndDate: '2026-07-10'
+    }
+  });
+  expect(invalidCalendarEntry.status()).toBe(400);
+
+  const auditorCalendarEntry = await auditorApi.post('/calendar', {
+    data: {
+      applicationId: applicationBody.id,
+      title: regressionName('AUDITOR_CALENDAR'),
+      assessmentType: 'WHITEBOX',
+      plannedYear: new Date().getFullYear()
+    }
+  });
+  expect(auditorCalendarEntry.status()).toBe(403);
+
+  await paysysApi.dispose();
+  await nbpApi.dispose();
+  await auditorApi.dispose();
+});

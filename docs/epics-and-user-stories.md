@@ -1001,6 +1001,22 @@ Epic 11 – Revalidation Workflow
 Epic 14 – Dashboards & Reporting
 Epic 15 – Audit Trail
 
+# v0.4.0 Implementation Status
+
+Implemented:
+
+- Epic 5 engagement list/detail workflow for planned and active VAPT engagements.
+- Epic 6 scoping record creation and finalization.
+- Paysys-Apprise initiation meeting capture with optional Bank/NBP attendance.
+- NBP-only engagement closure enforcement.
+- Paysys Go-Live transition from closed engagements.
+- Seeded workflow records for regression testing.
+
+Not implemented in v0.4.0:
+
+- Binary scoping attachments and report uploads. These remain part of the MinIO/report repository baseline.
+- Findings, revalidation, risk acceptance, dashboards, and notifications.
+
 ---
 
 # Phase 2 Scope

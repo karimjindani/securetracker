@@ -332,9 +332,10 @@ When a user opens a protected report:
 
 #### Audit Events
 
-- REPORT_VIEW_REQUESTED
-- REPORT_VIEW_SUCCESS
-- REPORT_VIEW_FAILED
+- REPORT_UPLOADED
+- REPORT_VERSION_UPLOADED
+- REPORT_VIEWED
+- REPORT_DOWNLOADED
 
 Passwords are never captured in audit records.
 
@@ -405,6 +406,14 @@ Passwords are never captured in audit records.
 # Success Criteria
 
 - 100% VAPT engagements tracked in system
+
+# v0.4.0 Implementation Note
+
+The implemented v0.4.0 baseline adds engagement list/detail pages, lifecycle transitions, and scoping records. The first Engagement Initiation meeting is captured as Paysys Labs plus Apprise / External VAPT Vendor, with Bank/NBP optional.
+
+NBP does not approve or agree the initial scope in this process. NBP remains responsible for final review/closing meeting governance and is the only role authorized to mark an engagement `Closed`.
+
+No formal `Scope Document` artifact is created. Scoping records capture meeting details, scope included/excluded, testing windows, test account summaries without passwords, and architecture summaries.
 - Complete audit trail
 - Centralized report repository
 - Full finding lifecycle management

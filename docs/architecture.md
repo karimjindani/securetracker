@@ -508,16 +508,15 @@ Recommended structure:
 vapt-tracker/
   engagements/
     {engagement_id}/
-      scope/
       reports/
-      evidence/
-      risk-acceptance/
+        {report_id}/
+          v{version}-{file_name}
 ```
 
 Example:
 
 ```text
-vapt-tracker/engagements/eng-2026-001/reports/final-report-v1.pdf
+vapt-tracker/engagements/eng-2026-001/reports/report-uuid/v1-final-report.pdf
 ```
 
 ---
@@ -589,7 +588,7 @@ If encrypted:
 is_password_protected = true
 ```
 
-If detection fails, allow manual marking by uploader.
+The v0.5.0 implementation detects encrypted PDFs conservatively from PDF encryption markers. Uploaders do not submit a PDF password and cannot use report fields to store passwords.
 
 ---
 
@@ -610,12 +609,23 @@ The PDF password:
 
 | Event | Description |
 |---|---|
-| REPORT_VIEW_REQUESTED | User attempted to open report |
-| REPORT_VIEW_SUCCESS | Report successfully opened |
-| REPORT_VIEW_FAILED | Incorrect password or access failure |
+| REPORT_UPLOADED | New logical report and first version uploaded |
+| REPORT_VERSION_UPLOADED | Additional report version uploaded |
+| REPORT_VIEWED | Original PDF stream requested for browser viewing |
 | REPORT_DOWNLOADED | Original encrypted PDF downloaded |
 
 No password value is ever recorded.
+
+## v0.5.0 Report API Surface
+
+- `GET /engagements/:id/reports`
+- `POST /engagements/:id/reports`
+- `GET /reports/:id`
+- `POST /reports/:id/versions`
+- `GET /reports/:id/versions/:versionId/view`
+- `GET /reports/:id/versions/:versionId/download`
+
+Draft report upload may move an engagement from `APPRISE_ASSESSMENT` to `DRAFT_REPORT_UPLOADED`. Final report upload may move an engagement from `APPRISE_REVALIDATION` to `FINAL_REPORT_UPLOADED`. Final report versions are blocked after engagement closure.
 
 ---
 
@@ -813,6 +823,53 @@ PATCH /users/:id
 ```
 
 JWTs are validated against the Keycloak realm issuer and JWKS endpoint. Local users are synchronized from token claims and mapped to organizations in PostgreSQL.
+
+## v0.3.0 Application and Calendar API Baseline
+
+```text
+GET /applications
+GET /applications/:id
+POST /applications
+PATCH /applications/:id
+GET /calendar
+POST /calendar
+PATCH /calendar/:id
+```
+
+Application management is limited to System Admin and Paysys Security Admin. Calendar management is limited to System Admin, NBP Security Admin, and Paysys Security Admin. Calendar entries are VAPT engagements in `PLANNED` status only; full lifecycle status transitions are introduced after this baseline.
+
+## v0.4.0 Engagement and Scoping Implementation
+
+Engagement management is introduced through `/engagements` and `/engagements/:id`. Planned calendar entries now continue into the engagement workflow.
+
+Backend modules:
+
+- `engagements`: list/detail, metadata updates, lifecycle transitions, and scoping record APIs.
+- Transition service rules enforce the documented lifecycle and role boundaries.
+- Audit entries are created for engagement updates, status transitions, scoping creation, scoping updates, and scoping finalization.
+
+Frontend routes:
+
+- `/engagements`
+- `/engagements/:id`
+
+Scoping records capture the Paysys-Apprise initiation meeting details. Bank/NBP attendance is optional for this first meeting. NBP initial scope approval is not required and no formal `Scope Document` artifact is created.
+
+Closure control remains unchanged: only NBP Security Admin may mark an engagement `Closed`; Paysys Security Admin may move `Closed` engagements to `Go-Live`.
+
+## v0.3.1 Ops and Regression API Baseline
+
+```text
+GET http://127.0.0.1:3300/api/health
+GET http://127.0.0.1:3300/api/containers
+POST http://127.0.0.1:3300/api/containers/up
+POST http://127.0.0.1:3300/api/regression/run
+GET http://127.0.0.1:3300/api/regression/runs/:id
+POST http://127.0.0.1:3300/api/test-data/cleanup
+POST http://127.0.0.1:3300/api/reset
+```
+
+Ops Console is a host-run local operator tool under `tools/ops-console`. It is not part of the authenticated SecureTracker frontend or Nest backend and is not included in Docker Compose. It binds to `127.0.0.1:3300` by default, can use `OPS_CONSOLE_TOKEN` for a simple local guard, and runs Docker/npm regression commands from the host repository. Regression cleanup only removes data tagged with the configured regression prefix. Reset restores the seeded baseline.
 
 ---
 

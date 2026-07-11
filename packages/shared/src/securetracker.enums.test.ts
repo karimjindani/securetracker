@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  canManageApplications,
+  canManageCalendar,
+  canManageEngagements,
+  canManageScoping,
   canCloseEngagement,
   canManageOrganizations,
   canMoveToGoLive,
@@ -27,6 +31,12 @@ describe('securetracker shared enums', () => {
   it('limits administration helpers and navigation', () => {
     expect(canManageOrganizations('SYSTEM_ADMIN')).toBe(true);
     expect(canManageOrganizations('AUDITOR')).toBe(false);
-    expect(navigationByRole.AUDITOR).toEqual(['dashboard']);
+    expect(canManageApplications('PAYSYS_SECURITY_ADMIN')).toBe(true);
+    expect(canManageApplications('AUDITOR')).toBe(false);
+    expect(canManageCalendar('NBP_SECURITY_ADMIN')).toBe(true);
+    expect(canManageEngagements('NBP_SECURITY_ADMIN')).toBe(true);
+    expect(canManageScoping('PAYSYS_SECURITY_ADMIN')).toBe(true);
+    expect(canManageScoping('NBP_SECURITY_ADMIN')).toBe(false);
+    expect(navigationByRole.AUDITOR).toEqual(['dashboard', 'applications', 'calendar', 'engagements']);
   });
 });
