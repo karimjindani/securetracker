@@ -126,3 +126,35 @@ Code reference:
 
 - Branch: `feat/v0.3.1-regression-ops`
 - Version: `0.4.0`
+
+## v0.5.0 - Report Repository, MinIO Uploads, and Protected PDF Viewer
+
+Status: Implemented on feature branch
+
+Baseline contents:
+
+- Report repository APIs for engagement report list, report detail, upload, version upload, view, and download.
+- MinIO storage for original PDF files under engagement/report object keys.
+- Report and report version metadata with SHA-256 hash, file size, MIME type, object key, uploader, upload notes, and protected PDF flag.
+- Audit events for report upload, version upload, view, and download.
+- Frontend reports panel on engagement detail with upload, version list, view, and download actions.
+- Browser PDF.js viewer with local-only password prompt for protected PDFs.
+- Regression coverage for generated `REGRESSION_` PDFs, protected flag detection, download integrity, and upload RBAC.
+
+Seeded records:
+
+- v0.5.0 does not seed real report files.
+- Reset restores the v0.4.0 seeded applications, engagements, and scoping records with no report metadata or objects.
+- Regression creates temporary `REGRESSION_` report files at runtime.
+
+Documentation references:
+
+- `docs/plans/v0.5.0-report-repository-plan.md`
+- `docs/testing/v0.5.0-test-results.md`
+- `docs/user-guides/v0.5.0-report-repository-user-guide.md`
+- `docs/testing/regression-suite.md`
+
+Code reference:
+
+- Branch: `feat/v0.3.1-regression-ops`
+- Version: `0.5.0`

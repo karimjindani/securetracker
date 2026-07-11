@@ -3,10 +3,13 @@ import AppsIcon from '@mui/icons-material/Apps';
 import BusinessIcon from '@mui/icons-material/Business';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import DownloadIcon from '@mui/icons-material/Download';
 import LogoutIcon from '@mui/icons-material/Logout';
 import PeopleIcon from '@mui/icons-material/People';
 import SecurityIcon from '@mui/icons-material/Security';
 import TrackChangesIcon from '@mui/icons-material/TrackChanges';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import {
   Alert,
   AppBar,
@@ -17,8 +20,14 @@ import {
   Container,
   CssBaseline,
   Divider,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControlLabel,
   Grid,
+  IconButton,
+  LinearProgress,
   List,
   ListItemButton,
   ListItemIcon,
@@ -37,22 +46,27 @@ import {
   applicationCriticalities,
   applicationEnvironments,
   assessmentTypes,
+  canUploadReports,
   canManageApplications,
   canManageCalendar,
   canManageScoping,
   engagementStatuses,
   navigationByRole,
+  reportTypes,
   type ApplicationCriticality,
   type ApplicationEnvironment,
   type AssessmentType,
   type EngagementStatus,
+  type ReportType,
   type Role
 } from '@securetracker/shared';
-import { useEffect, useMemo, useState, type ReactElement } from 'react';
+import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist';
+import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthProvider.js';
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
+GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).toString();
 
 interface ApplicationRecord {
   id: string;
@@ -101,6 +115,30 @@ interface EngagementRecord extends CalendarEntry {
   vendorOrganization?: { id: string; name: string };
 }
 
+interface ReportVersionRecord {
+  id: string;
+  versionNumber: number;
+  fileName: string;
+  fileMimeType: string;
+  fileSizeBytes: string;
+  sha256Hash: string;
+  isPasswordProtected: boolean;
+  uploadedAt: string;
+  uploadNotes?: string;
+  uploadedBy?: { fullName: string; email: string };
+}
+
+interface ReportRecord {
+  id: string;
+  reportType: ReportType;
+  title: string;
+  description?: string;
+  currentVersion: number;
+  immutable: boolean;
+  createdAt: string;
+  versions: ReportVersionRecord[];
+}
+
 const emptyApplicationForm = {
   name: '',
   description: '',
@@ -134,6 +172,13 @@ const emptyScopingForm = {
   testingWindowEnd: '',
   testAccountsSummary: '',
   architectureSummary: ''
+};
+
+const emptyReportForm = {
+  reportType: 'DRAFT_REPORT' as ReportType,
+  title: '',
+  description: '',
+  uploadNotes: ''
 };
 
 const theme = createTheme({
@@ -531,10 +576,15 @@ function EngagementDetailPage() {
   const { id } = useParams();
   const { user, apiFetch } = useAuth();
   const [engagement, setEngagement] = useState<EngagementRecord | null>(null);
+  const [reports, setReports] = useState<ReportRecord[]>([]);
   const [form, setForm] = useState(emptyScopingForm);
+  const [reportForm, setReportForm] = useState(emptyReportForm);
+  const [reportFile, setReportFile] = useState<File | null>(null);
+  const [viewer, setViewer] = useState<{ title: string; url: string; protectedPdf: boolean } | null>(null);
   const [message, setMessage] = useState('');
   const [transitionRemarks, setTransitionRemarks] = useState('');
   const canScope = Boolean(user && canManageScoping(user.role));
+  const canUploadReport = Boolean(user && canUploadReports(user.role));
 
   const loadEngagement = async () => {
     if (!id) return;
@@ -542,8 +592,15 @@ function EngagementDetailPage() {
     if (response.ok) setEngagement(await response.json());
   };
 
+  const loadReports = async () => {
+    if (!id) return;
+    const response = await apiFetch(`${apiBaseUrl}/engagements/${id}/reports`);
+    if (response.ok) setReports(await response.json());
+  };
+
   useEffect(() => {
     void loadEngagement();
+    void loadReports();
   }, [id]);
 
   if (!engagement) {
@@ -573,6 +630,46 @@ function EngagementDetailPage() {
       setForm(emptyScopingForm);
       await loadEngagement();
     }
+  };
+
+  const uploadReport = async () => {
+    if (!reportFile) {
+      setMessage('Select a PDF file before upload.');
+      return;
+    }
+    const body = new FormData();
+    body.append('file', reportFile);
+    body.append('reportType', reportForm.reportType);
+    body.append('title', reportForm.title);
+    if (reportForm.description) body.append('description', reportForm.description);
+    if (reportForm.uploadNotes) body.append('uploadNotes', reportForm.uploadNotes);
+    const response = await apiFetch(`${apiBaseUrl}/engagements/${engagement.id}/reports`, { method: 'POST', body });
+    setMessage(response.ok ? 'Report uploaded.' : 'Report upload failed.');
+    if (response.ok) {
+      setReportForm(emptyReportForm);
+      setReportFile(null);
+      await loadReports();
+      await loadEngagement();
+    }
+  };
+
+  const openReportVersion = async (report: ReportRecord, version: ReportVersionRecord, mode: 'view' | 'download') => {
+    const response = await apiFetch(`${apiBaseUrl}/reports/${report.id}/versions/${version.id}/${mode}`);
+    if (!response.ok) {
+      setMessage(mode === 'view' ? 'Report viewer could not be opened.' : 'Report download failed.');
+      return;
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    if (mode === 'download') {
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = version.fileName;
+      link.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+    setViewer({ title: `${report.title} v${version.versionNumber}`, url, protectedPdf: version.isPasswordProtected });
   };
 
   const finalizeScopingRecord = async (recordId: string) => {
@@ -650,6 +747,76 @@ function EngagementDetailPage() {
         </Stack>
       </Paper>
 
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
+        <Typography variant="h6" gutterBottom>Reports</Typography>
+        <Stack spacing={2}>
+          {canUploadReport && (
+            <Paper variant="outlined" sx={{ p: 2 }}>
+              <Grid container spacing={2} alignItems="center">
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <TextField select fullWidth label="Report type" value={reportForm.reportType} onChange={(event) => setReportForm({ ...reportForm, reportType: event.target.value as ReportType })}>
+                    {reportTypes.map((type) => (
+                      <MenuItem key={type} value={type}>{type.replaceAll('_', ' ')}</MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <TextField fullWidth label="Title" value={reportForm.title} onChange={(event) => setReportForm({ ...reportForm, title: event.target.value })} />
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <TextField fullWidth label="Description" value={reportForm.description} onChange={(event) => setReportForm({ ...reportForm, description: event.target.value })} />
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <TextField fullWidth label="Upload notes" value={reportForm.uploadNotes} onChange={(event) => setReportForm({ ...reportForm, uploadNotes: event.target.value })} />
+                </Grid>
+                <Grid size={{ xs: 12, md: 8 }}>
+                  <Button component="label" variant="outlined" startIcon={<UploadFileIcon />}>
+                    {reportFile ? reportFile.name : 'Select PDF'}
+                    <input hidden type="file" accept="application/pdf,.pdf" onChange={(event) => setReportFile(event.target.files?.[0] ?? null)} />
+                  </Button>
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <Button fullWidth variant="contained" onClick={uploadReport} disabled={!reportForm.title || !reportFile}>
+                    Upload report
+                  </Button>
+                </Grid>
+              </Grid>
+            </Paper>
+          )}
+          {reports.map((report) => (
+            <Paper key={report.id} variant="outlined" sx={{ p: 2 }}>
+              <Stack spacing={1.5}>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700, mr: 1 }}>{report.title}</Typography>
+                  <Chip label={report.reportType.replaceAll('_', ' ')} size="small" />
+                  <Chip label={`v${report.currentVersion}`} size="small" />
+                  {report.immutable && <Chip label="Immutable" color="success" size="small" />}
+                </Stack>
+                {report.description && <Typography color="text.secondary" variant="body2">{report.description}</Typography>}
+                <Stack spacing={1}>
+                  {report.versions.map((version) => (
+                    <Stack key={version.id} direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ xs: 'flex-start', md: 'center' }}>
+                      <Chip label={`Version ${version.versionNumber}`} size="small" />
+                      <Typography variant="body2" sx={{ flexGrow: 1 }}>
+                        {version.fileName} - {formatBytes(version.fileSizeBytes)} - SHA-256 {version.sha256Hash.slice(0, 12)}...
+                      </Typography>
+                      {version.isPasswordProtected && <Chip label="Password protected" color="warning" size="small" />}
+                      <IconButton aria-label="View report" onClick={() => openReportVersion(report, version, 'view')}>
+                        <VisibilityIcon />
+                      </IconButton>
+                      <IconButton aria-label="Download report" onClick={() => openReportVersion(report, version, 'download')}>
+                        <DownloadIcon />
+                      </IconButton>
+                    </Stack>
+                  ))}
+                </Stack>
+              </Stack>
+            </Paper>
+          ))}
+          {reports.length === 0 && <Typography color="text.secondary">No reports have been uploaded yet.</Typography>}
+        </Stack>
+      </Paper>
+
       {canScope && (
         <Paper variant="outlined" sx={{ p: 2.5 }}>
           <Typography variant="h6" gutterBottom>New Scoping Record</Typography>
@@ -687,7 +854,101 @@ function EngagementDetailPage() {
           </Grid>
         </Paper>
       )}
+      <PdfViewerDialog
+        open={Boolean(viewer)}
+        title={viewer?.title ?? ''}
+        url={viewer?.url ?? ''}
+        protectedPdf={Boolean(viewer?.protectedPdf)}
+        onClose={() => {
+          if (viewer?.url) URL.revokeObjectURL(viewer.url);
+          setViewer(null);
+        }}
+      />
     </Stack>
+  );
+}
+
+function PdfViewerDialog({
+  open,
+  title,
+  url,
+  protectedPdf,
+  onClose
+}: {
+  open: boolean;
+  title: string;
+  url: string;
+  protectedPdf: boolean;
+  onClose: () => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [password, setPassword] = useState('');
+  const [status, setStatus] = useState(protectedPdf ? 'Enter the PDF password to view this report.' : 'Loading PDF...');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open || !url || (protectedPdf && !password)) return;
+    let cancelled = false;
+    setLoading(true);
+    setStatus('Loading PDF...');
+    const task = getDocument({ url, password: password || undefined });
+    task.promise
+      .then(async (pdf) => {
+        if (cancelled) return;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 1.25 });
+        const canvas = canvasRef.current;
+        const context = canvas?.getContext('2d');
+        if (!canvas || !context) return;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvas, canvasContext: context, viewport }).promise;
+        if (!cancelled) setStatus(`Showing page 1 of ${pdf.numPages}.`);
+      })
+      .catch(() => {
+        if (!cancelled) setStatus('The PDF could not be opened. Check the password if this file is protected.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+      task.destroy();
+    };
+  }, [open, password, protectedPdf, url]);
+
+  useEffect(() => {
+    if (open) {
+      setPassword('');
+      setStatus(protectedPdf ? 'Enter the PDF password to view this report.' : 'Loading PDF...');
+    }
+  }, [open, protectedPdf]);
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
+      <DialogTitle>{title}</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2}>
+          {protectedPdf && (
+            <TextField
+              label="PDF password"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              helperText="Password is used only by the browser viewer and is not sent to the backend."
+            />
+          )}
+          {loading && <LinearProgress />}
+          <Alert severity={status.includes('could not') ? 'error' : 'info'}>{status}</Alert>
+          <Box sx={{ overflow: 'auto', border: '1px solid', borderColor: 'divider', minHeight: 420, bgcolor: '#f8fafc' }}>
+            <canvas ref={canvasRef} />
+          </Box>
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+      </DialogActions>
+    </Dialog>
   );
 }
 
@@ -798,4 +1059,12 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 function formatDate(value?: string) {
   if (!value) return 'Not set';
   return new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(value));
+}
+
+function formatBytes(value: string) {
+  const bytes = Number(value);
+  if (!Number.isFinite(bytes)) return value;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }

@@ -508,16 +508,15 @@ Recommended structure:
 vapt-tracker/
   engagements/
     {engagement_id}/
-      scope/
       reports/
-      evidence/
-      risk-acceptance/
+        {report_id}/
+          v{version}-{file_name}
 ```
 
 Example:
 
 ```text
-vapt-tracker/engagements/eng-2026-001/reports/final-report-v1.pdf
+vapt-tracker/engagements/eng-2026-001/reports/report-uuid/v1-final-report.pdf
 ```
 
 ---
@@ -589,7 +588,7 @@ If encrypted:
 is_password_protected = true
 ```
 
-If detection fails, allow manual marking by uploader.
+The v0.5.0 implementation detects encrypted PDFs conservatively from PDF encryption markers. Uploaders do not submit a PDF password and cannot use report fields to store passwords.
 
 ---
 
@@ -610,12 +609,23 @@ The PDF password:
 
 | Event | Description |
 |---|---|
-| REPORT_VIEW_REQUESTED | User attempted to open report |
-| REPORT_VIEW_SUCCESS | Report successfully opened |
-| REPORT_VIEW_FAILED | Incorrect password or access failure |
+| REPORT_UPLOADED | New logical report and first version uploaded |
+| REPORT_VERSION_UPLOADED | Additional report version uploaded |
+| REPORT_VIEWED | Original PDF stream requested for browser viewing |
 | REPORT_DOWNLOADED | Original encrypted PDF downloaded |
 
 No password value is ever recorded.
+
+## v0.5.0 Report API Surface
+
+- `GET /engagements/:id/reports`
+- `POST /engagements/:id/reports`
+- `GET /reports/:id`
+- `POST /reports/:id/versions`
+- `GET /reports/:id/versions/:versionId/view`
+- `GET /reports/:id/versions/:versionId/download`
+
+Draft report upload may move an engagement from `APPRISE_ASSESSMENT` to `DRAFT_REPORT_UPLOADED`. Final report upload may move an engagement from `APPRISE_REVALIDATION` to `FINAL_REPORT_UPLOADED`. Final report versions are blocked after engagement closure.
 
 ---
 

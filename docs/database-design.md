@@ -382,18 +382,18 @@ UNIQUE (sha256_hash)
 
 Security note: do not store PDF passwords.
 
-## 9.3 report_access_logs
+v0.5.0 implementation note: `reports.created_by` and `report_versions.uploaded_by` are foreign keys to users. Report version responses expose file size as a string to avoid JSON precision loss for BIGINT values.
 
-Tracks report viewing and downloading.
+## 9.3 report access audit events
+
+Report viewing and downloading are recorded in the central audit log instead of a separate access-log table in the v0.5.0 implementation.
 
 | Column | Type | Required | Description |
 |---|---|---:|---|
-| id | UUID | Yes | Primary key |
-| report_version_id | UUID | Yes | FK to report_versions |
-| user_id | UUID | Yes | FK to users |
-| action | VARCHAR(50) | Yes | VIEW_REQUESTED, VIEW_SUCCESS, VIEW_FAILED, DOWNLOADED |
-| success | BOOLEAN | Yes | Whether action succeeded |
-| failure_reason | VARCHAR(150) | No | Generic reason only |
+| action | VARCHAR(100) | Yes | `REPORT_UPLOADED`, `REPORT_VERSION_UPLOADED`, `REPORT_VIEWED`, or `REPORT_DOWNLOADED` |
+| entity_type | VARCHAR(100) | Yes | `REPORT` or `REPORT_VERSION` |
+| entity_id | UUID | Yes | Report or report version identifier |
+| new_value | JSONB | No | Sanitized metadata only; no PDF passwords |
 | ip_address | VARCHAR(80) | No | User IP |
 | user_agent | TEXT | No | Browser info |
 | created_at | TIMESTAMP | Yes | Timestamp |
@@ -609,9 +609,8 @@ ENGAGEMENT_CREATED
 SCOPING_RECORD_CREATED
 SCOPING_RECORD_UPDATED
 REPORT_UPLOADED
-REPORT_VIEW_REQUESTED
-REPORT_VIEW_SUCCESS
-REPORT_VIEW_FAILED
+REPORT_VERSION_UPLOADED
+REPORT_VIEWED
 REPORT_DOWNLOADED
 FINDING_CREATED
 FINDING_ASSIGNED

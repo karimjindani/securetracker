@@ -7,6 +7,7 @@ import { DatabaseModule } from './database/database.module.js';
 import { EngagementsModule } from './engagements/engagements.module.js';
 import { HealthModule } from './health/health.module.js';
 import { OrganizationsModule } from './organizations/organizations.module.js';
+import { ReportsModule } from './reports/reports.module.js';
 import { UsersModule } from './users/users.module.js';
 
 @Module({
@@ -18,6 +19,7 @@ import { UsersModule } from './users/users.module.js';
     ApplicationsModule,
     CalendarModule,
     EngagementsModule,
+    ReportsModule,
     OrganizationsModule,
     UsersModule
   ]

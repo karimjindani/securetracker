@@ -53,6 +53,17 @@ export type FindingStatus = typeof findingStatuses[number];
 export const assessmentTypes = ['WHITEBOX', 'BLACK_GREY'] as const;
 export type AssessmentType = typeof assessmentTypes[number];
 
+export const reportTypes = [
+  'DRAFT_REPORT',
+  'REVALIDATION_REPORT',
+  'FINAL_REPORT',
+  'RISK_ACCEPTANCE_DOCUMENT',
+  'EVIDENCE_DOCUMENT',
+  'ADDENDUM'
+] as const;
+
+export type ReportType = typeof reportTypes[number];
+
 export const applicationCriticalities = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const;
 export type ApplicationCriticality = typeof applicationCriticalities[number];
 
@@ -74,6 +85,9 @@ export const canManageEngagements = (role: Role): boolean =>
 
 export const canManageScoping = (role: Role): boolean =>
   role === 'SYSTEM_ADMIN' || role === 'PAYSYS_SECURITY_ADMIN';
+
+export const canUploadReports = (role: Role): boolean =>
+  role === 'SYSTEM_ADMIN' || role === 'PAYSYS_SECURITY_ADMIN' || role === 'VENDOR_ADMIN';
 
 export const isReadOnlyRole = (role: Role): boolean => role === 'NBP_VIEWER' || role === 'AUDITOR';
 

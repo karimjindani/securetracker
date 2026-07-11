@@ -112,6 +112,8 @@ model User {
   organization   Organization  @relation(fields: [organizationId], references: [id])
   createdApplications Application[] @relation("ApplicationCreator")
   createdEngagements  VaptEngagement[] @relation("EngagementCreator")
+  createdReports      Report[] @relation("ReportCreator")
+  uploadedReportVersions ReportVersion[] @relation("ReportVersionUploader")
   assignedFindings    Finding[] @relation("FindingAssignee")
   auditLogs           AuditLog[]
 }
@@ -207,6 +209,7 @@ model Report {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   engagement     VaptEngagement  @relation(fields: [engagementId], references: [id])
+  createdBy      User            @relation("ReportCreator", fields: [createdById], references: [id])
   versions       ReportVersion[]
 }
 
@@ -224,6 +227,7 @@ model ReportVersion {
   uploadedAt          DateTime    @default(now())
   uploadNotes         String?
   report              Report      @relation(fields: [reportId], references: [id])
+  uploadedBy          User        @relation("ReportVersionUploader", fields: [uploadedById], references: [id])
 
   @@unique([reportId, versionNumber])
 }

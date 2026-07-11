@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { Client as MinioClient } from 'minio';
 
 export const regressionPrefix = process.env.REGRESSION_DATA_PREFIX ?? 'REGRESSION_';
 
@@ -9,6 +10,7 @@ export interface CleanupSummary {
   auditLogs: number;
   users: number;
   organizations: number;
+  reportObjects: number;
 }
 
 export interface ResetSummary extends CleanupSummary {
@@ -49,6 +51,12 @@ export async function cleanupRegressionData(prisma = new PrismaClient()): Promis
   const userIds = regressionUsers.map((user) => user.id);
   const organizationIds = regressionOrganizations.map((organization) => organization.id);
 
+  const reportVersions = await prisma.reportVersion.findMany({
+    where: { report: { engagementId: { in: engagementIds } } },
+    select: { objectStorageKey: true }
+  });
+  const reportObjects = await removeReportObjects(reportVersions.map((version) => version.objectStorageKey));
+
   const auditLogs = await prisma.auditLog.deleteMany({
     where: {
       OR: [
@@ -78,8 +86,26 @@ export async function cleanupRegressionData(prisma = new PrismaClient()): Promis
     engagements: engagements.count,
     auditLogs: auditLogs.count,
     users: users.count,
-    organizations: organizations.count
+    organizations: organizations.count,
+    reportObjects
   };
+}
+
+async function removeReportObjects(objectKeys: string[]) {
+  if (objectKeys.length === 0) return 0;
+  try {
+    const client = new MinioClient({
+      endPoint: process.env.MINIO_ENDPOINT ?? 'localhost',
+      port: Number(process.env.MINIO_PORT ?? 9000),
+      useSSL: (process.env.MINIO_USE_SSL ?? 'false') === 'true',
+      accessKey: process.env.MINIO_ROOT_USER ?? process.env.MINIO_ACCESS_KEY ?? 'securetracker',
+      secretKey: process.env.MINIO_ROOT_PASSWORD ?? process.env.MINIO_SECRET_KEY ?? 'securetracker-secret'
+    });
+    await client.removeObjects(process.env.MINIO_BUCKET ?? 'vapt-tracker', objectKeys);
+    return objectKeys.length;
+  } catch {
+    return 0;
+  }
 }
 
 export async function resetToSeededData(prisma = new PrismaClient()): Promise<ResetSummary> {

@@ -28,14 +28,18 @@ npm.cmd run ops
 - Auditor denial for scoping writes.
 - Seeded NBP closing meeting engagement can be closed only by NBP Security Admin.
 - Seeded closed engagement can be moved to `GO_LIVE` by Paysys Security Admin.
+- Vendor/Paysys report upload creates version metadata and MinIO-backed files.
+- Protected PDF uploads set the protected flag without submitting passwords.
+- Report download returns the original uploaded PDF bytes.
+- Auditor cannot upload reports.
 
 ## Future Coverage Placeholders
 
-Pending specs remain for reports, findings, revalidation, risk acceptance, dashboards, audit search, and notifications.
+Pending specs remain for findings, revalidation, risk acceptance, dashboards, audit search, and notifications.
 
 ## Data Safety
 
-Regression-generated records must use the `REGRESSION_` prefix. Cleanup deletes only regression-prefixed applications, engagements, scoping records, users, organizations, and related audit records. Reset removes business workflow data and restores seeded organizations, demo users, applications, engagements, and scoping records.
+Regression-generated records must use the `REGRESSION_` prefix. Cleanup deletes only regression-prefixed applications, engagements, scoping records, report metadata, report versions, users, organizations, and related audit records. Reset removes business workflow data and restores seeded organizations, demo users, applications, engagements, and scoping records.
 
 The external Ops Console at `http://127.0.0.1:3300` provides buttons for running regression, cleanup, and reset. It streams real command logs so startup and dependency failures are visible.
 
@@ -46,7 +50,7 @@ The seeded baseline includes:
 - Three seeded applications.
 - Five seeded engagements covering planned, initiated, assessment, closing meeting, and closed states.
 - Draft and final scoping records for initiation/scoping regression.
-- No real credentials or passwords.
+- No real credentials, passwords, or seeded report PDFs.
 
 ## Browser Smoke
 

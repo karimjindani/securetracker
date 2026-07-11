@@ -113,3 +113,25 @@ After `npm.cmd run db:push` and `npm.cmd run db:seed` or `npm.cmd run reset:seed
 The seeded baseline now includes demo users, three applications, five engagements, and scoping records for regression. Seeded test account summaries contain no passwords.
 
 NBP initial scope approval is not required. Bank/NBP attendance remains optional for the first Paysys-Apprise initiation meeting.
+
+# v0.5.0 Report Repository
+
+MinIO remains part of the Compose stack and is required for report upload, view, and download.
+
+Relevant local defaults:
+
+- API MinIO endpoint: `MINIO_ENDPOINT=minio`
+- API MinIO port: `MINIO_PORT=9000`
+- Bucket: `MINIO_BUCKET=vapt-tracker`
+- MinIO console: `http://localhost:9001`
+
+The backend creates the local bucket if it is missing. Uploaded PDFs are stored unchanged in MinIO. PDF passwords are never stored, logged, or sent to the backend for validation.
+
+Report APIs:
+
+- `GET /engagements/:id/reports`
+- `POST /engagements/:id/reports`
+- `GET /reports/:id`
+- `POST /reports/:id/versions`
+- `GET /reports/:id/versions/:versionId/view`
+- `GET /reports/:id/versions/:versionId/download`

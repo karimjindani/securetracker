@@ -332,9 +332,10 @@ When a user opens a protected report:
 
 #### Audit Events
 
-- REPORT_VIEW_REQUESTED
-- REPORT_VIEW_SUCCESS
-- REPORT_VIEW_FAILED
+- REPORT_UPLOADED
+- REPORT_VERSION_UPLOADED
+- REPORT_VIEWED
+- REPORT_DOWNLOADED
 
 Passwords are never captured in audit records.
 
