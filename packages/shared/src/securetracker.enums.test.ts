@@ -4,7 +4,6 @@ import {
   canManageCalendar,
   canManageEngagements,
   canManageScoping,
-  canAccessOps,
   canCloseEngagement,
   canManageOrganizations,
   canMoveToGoLive,
@@ -38,8 +37,6 @@ describe('securetracker shared enums', () => {
     expect(canManageEngagements('NBP_SECURITY_ADMIN')).toBe(true);
     expect(canManageScoping('PAYSYS_SECURITY_ADMIN')).toBe(true);
     expect(canManageScoping('NBP_SECURITY_ADMIN')).toBe(false);
-    expect(canAccessOps('SYSTEM_ADMIN')).toBe(true);
-    expect(canAccessOps('NBP_SECURITY_ADMIN')).toBe(false);
     expect(navigationByRole.AUDITOR).toEqual(['dashboard', 'applications', 'calendar', 'engagements']);
   });
 });

@@ -850,15 +850,16 @@ Closure control remains unchanged: only NBP Security Admin may mark an engagemen
 ## v0.3.1 Ops and Regression API Baseline
 
 ```text
-GET /ops/health
-GET /ops/containers
-POST /ops/regression/run
-GET /ops/regression/runs/:id
-POST /ops/test-data/cleanup
-POST /ops/reset
+GET http://127.0.0.1:3300/api/health
+GET http://127.0.0.1:3300/api/containers
+POST http://127.0.0.1:3300/api/containers/up
+POST http://127.0.0.1:3300/api/regression/run
+GET http://127.0.0.1:3300/api/regression/runs/:id
+POST http://127.0.0.1:3300/api/test-data/cleanup
+POST http://127.0.0.1:3300/api/reset
 ```
 
-Ops APIs are local/dev-only and require `OPS_ENABLED=true`, authenticated `SYSTEM_ADMIN` access, and normal JWT validation. Regression cleanup only removes data tagged with the configured regression prefix. Reset removes business workflow data and restores seeded organizations.
+Ops Console is a host-run local operator tool under `tools/ops-console`. It is not part of the authenticated SecureTracker frontend or Nest backend and is not included in Docker Compose. It binds to `127.0.0.1:3300` by default, can use `OPS_CONSOLE_TOKEN` for a simple local guard, and runs Docker/npm regression commands from the host repository. Regression cleanup only removes data tagged with the configured regression prefix. Reset restores the seeded baseline.
 
 ---
 

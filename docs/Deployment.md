@@ -27,21 +27,18 @@ npm.cmd run db:push
 npm.cmd run db:seed
 ```
 
-Start local infrastructure:
+Start the full containerized application:
 
 ```powershell
-docker compose up postgres keycloak minio smtp-test-service
+docker compose up -d
 ```
 
-Start the backend:
+The Compose stack includes PostgreSQL, Keycloak, MinIO, Mailpit, backend API, and the Nginx-served frontend.
+
+For local source-level development, backend and frontend can still be started separately:
 
 ```powershell
 npm.cmd run dev:backend
-```
-
-Start the frontend:
-
-```powershell
 npm.cmd run dev:frontend
 ```
 
@@ -79,13 +76,12 @@ After the local stack is running, authenticated users can access:
 
 Calendar entries created in `v0.3.0` are stored as `PLANNED` VAPT engagements. No additional environment variables are required beyond the `v0.2.0` authentication configuration.
 
-# v0.3.1 Ops Console and Regression
+# v0.3.1 External Ops Console and Regression
 
-Ops Console is disabled by default. Enable it only in local/dev:
+The Ops Console is a host-run local tool outside the SecureTracker application containers. Start it from the repository root:
 
 ```powershell
-$env:OPS_ENABLED="true"
-$env:VITE_OPS_ENABLED="true"
+npm.cmd run ops
 ```
 
 Regression commands:
@@ -100,10 +96,10 @@ npm.cmd run reset:seeded
 Open the Ops Console at:
 
 ```text
-http://localhost:5173/ops
+http://127.0.0.1:3300
 ```
 
-The page is visible only to System Admin users when frontend Ops is enabled.
+If `OPS_CONSOLE_TOKEN` is configured, enter that token in the console header. The main SecureTracker application does not expose `/ops`.
 
 # v0.4.0 Engagement and Scoping
 

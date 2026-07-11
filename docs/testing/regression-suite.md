@@ -4,6 +4,8 @@
 
 The regression suite verifies that committed SecureTracker baselines continue to work as new modules are added.
 
+Regression runs from the host machine through npm or the external Ops Console. It targets the Dockerized SecureTracker app at the configured localhost URLs and is not executed from the application backend container.
+
 ## Commands
 
 ```powershell
@@ -12,6 +14,7 @@ npm.cmd run test:regression
 npm.cmd run test:regression:headed
 npm.cmd run test:data:cleanup
 npm.cmd run reset:seeded
+npm.cmd run ops
 ```
 
 ## Current Coverage
@@ -33,6 +36,8 @@ Pending specs remain for reports, findings, revalidation, risk acceptance, dashb
 ## Data Safety
 
 Regression-generated records must use the `REGRESSION_` prefix. Cleanup deletes only regression-prefixed applications, engagements, scoping records, users, organizations, and related audit records. Reset removes business workflow data and restores seeded organizations, demo users, applications, engagements, and scoping records.
+
+The external Ops Console at `http://127.0.0.1:3300` provides buttons for running regression, cleanup, and reset. It streams real command logs so startup and dependency failures are visible.
 
 ## Seeded v0.4.0 Workflow Records
 

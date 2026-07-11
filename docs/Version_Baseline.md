@@ -80,8 +80,8 @@ Baseline contents:
 
 - Playwright regression suite for platform, auth, RBAC, applications, and calendar.
 - Regression data cleanup and reset-to-seeded baseline scripts.
-- Local/dev Ops APIs for health, containers, regression runs, cleanup, and reset.
-- Frontend Ops Console route gated for System Admin users.
+- External host-run Ops Console for health, containers, regression runs, cleanup, and reset.
+- Ops Console runs outside the SecureTracker frontend/backend containers at `http://127.0.0.1:3300`.
 
 Documentation references:
 

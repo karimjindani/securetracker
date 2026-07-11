@@ -65,8 +65,6 @@ export const canManageApplications = (role: Role): boolean =>
 export const canManageCalendar = (role: Role): boolean =>
   role === 'SYSTEM_ADMIN' || role === 'NBP_SECURITY_ADMIN' || role === 'PAYSYS_SECURITY_ADMIN';
 
-export const canAccessOps = (role: Role): boolean => role === 'SYSTEM_ADMIN';
-
 export const canCloseEngagement = (role: Role): boolean => role === 'NBP_SECURITY_ADMIN';
 
 export const canMoveToGoLive = (role: Role): boolean => role === 'PAYSYS_SECURITY_ADMIN';
@@ -84,7 +82,7 @@ export const canManageOrganizations = (role: Role): boolean => role === 'SYSTEM_
 export const canManageUsers = (role: Role): boolean => role === 'SYSTEM_ADMIN';
 
 export const navigationByRole: Record<Role, string[]> = {
-  SYSTEM_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'users', 'ops'],
+  SYSTEM_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'users'],
   NBP_SECURITY_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'users'],
   NBP_VIEWER: ['dashboard', 'applications', 'calendar', 'engagements'],
   PAYSYS_SECURITY_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'users'],
