@@ -104,3 +104,16 @@ http://localhost:5173/ops
 ```
 
 The page is visible only to System Admin users when frontend Ops is enabled.
+
+# v0.4.0 Engagement and Scoping
+
+After `npm.cmd run db:push` and `npm.cmd run db:seed` or `npm.cmd run reset:seeded`, authenticated users can access:
+
+- Frontend engagement list at `/engagements`
+- Frontend engagement detail at `/engagements/:id`
+- Backend engagement APIs at `/engagements`
+- Backend scoping APIs at `/engagements/:id/scoping-records` and `/scoping-records/:id/finalize`
+
+The seeded baseline now includes demo users, three applications, five engagements, and scoping records for regression. Seeded test account summaries contain no passwords.
+
+NBP initial scope approval is not required. Bank/NBP attendance remains optional for the first Paysys-Apprise initiation meeting.

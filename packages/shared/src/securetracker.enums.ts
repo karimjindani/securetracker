@@ -32,6 +32,9 @@ export const engagementStatuses = [
 
 export type EngagementStatus = typeof engagementStatuses[number];
 
+export const scopingRecordStatuses = ['DRAFT', 'FINAL'] as const;
+export type ScopingRecordStatus = typeof scopingRecordStatuses[number];
+
 export const findingStatuses = [
   'OPEN',
   'ASSIGNED',
@@ -68,6 +71,12 @@ export const canCloseEngagement = (role: Role): boolean => role === 'NBP_SECURIT
 
 export const canMoveToGoLive = (role: Role): boolean => role === 'PAYSYS_SECURITY_ADMIN';
 
+export const canManageEngagements = (role: Role): boolean =>
+  role === 'SYSTEM_ADMIN' || role === 'NBP_SECURITY_ADMIN' || role === 'PAYSYS_SECURITY_ADMIN';
+
+export const canManageScoping = (role: Role): boolean =>
+  role === 'SYSTEM_ADMIN' || role === 'PAYSYS_SECURITY_ADMIN';
+
 export const isReadOnlyRole = (role: Role): boolean => role === 'NBP_VIEWER' || role === 'AUDITOR';
 
 export const canManageOrganizations = (role: Role): boolean => role === 'SYSTEM_ADMIN';
@@ -75,13 +84,13 @@ export const canManageOrganizations = (role: Role): boolean => role === 'SYSTEM_
 export const canManageUsers = (role: Role): boolean => role === 'SYSTEM_ADMIN';
 
 export const navigationByRole: Record<Role, string[]> = {
-  SYSTEM_ADMIN: ['dashboard', 'applications', 'calendar', 'organizations', 'users', 'ops'],
-  NBP_SECURITY_ADMIN: ['dashboard', 'applications', 'calendar', 'organizations', 'users'],
-  NBP_VIEWER: ['dashboard', 'applications', 'calendar'],
-  PAYSYS_SECURITY_ADMIN: ['dashboard', 'applications', 'calendar', 'organizations', 'users'],
-  PAYSYS_DEVELOPER: ['dashboard', 'applications', 'calendar'],
-  VENDOR_ADMIN: ['dashboard', 'applications', 'calendar'],
-  AUDITOR: ['dashboard', 'applications', 'calendar']
+  SYSTEM_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'users', 'ops'],
+  NBP_SECURITY_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'users'],
+  NBP_VIEWER: ['dashboard', 'applications', 'calendar', 'engagements'],
+  PAYSYS_SECURITY_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'users'],
+  PAYSYS_DEVELOPER: ['dashboard', 'applications', 'calendar', 'engagements'],
+  VENDOR_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements'],
+  AUDITOR: ['dashboard', 'applications', 'calendar', 'engagements']
 };
 
 export const isRole = (value: string): value is Role => roles.includes(value as Role);

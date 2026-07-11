@@ -183,12 +183,27 @@ async function cleanupRegressionData(prisma: PrismaClient) {
     },
     select: { id: true }
   });
+  const regressionUsers = await prisma.user.findMany({
+    where: { OR: [{ email: { startsWith: prefix } }, { fullName: { startsWith: prefix } }] },
+    select: { id: true }
+  });
+  const regressionOrganizations = await prisma.organization.findMany({
+    where: { name: { startsWith: prefix } },
+    select: { id: true }
+  });
 
   const engagementIds = regressionEngagements.map((engagement) => engagement.id);
   const applicationIds = regressionApplications.map((application) => application.id);
+  const userIds = regressionUsers.map((user) => user.id);
+  const organizationIds = regressionOrganizations.map((organization) => organization.id);
 
   const auditLogs = await prisma.auditLog.deleteMany({
-    where: { entityId: { in: [...engagementIds, ...applicationIds] } }
+    where: {
+      OR: [
+        { entityId: { in: [...engagementIds, ...applicationIds, ...userIds, ...organizationIds] } },
+        { action: { startsWith: prefix } }
+      ]
+    }
   });
   await prisma.finding.deleteMany({ where: { engagementId: { in: engagementIds } } });
   await prisma.reportVersion.deleteMany({ where: { report: { engagementId: { in: engagementIds } } } });
@@ -198,8 +213,17 @@ async function cleanupRegressionData(prisma: PrismaClient) {
     where: { OR: [{ id: { in: engagementIds } }, { applicationId: { in: applicationIds } }] }
   });
   const applications = await prisma.application.deleteMany({ where: { id: { in: applicationIds } } });
+  const users = await prisma.user.deleteMany({ where: { id: { in: userIds } } });
+  const organizations = await prisma.organization.deleteMany({ where: { id: { in: organizationIds } } });
 
-  return { prefix, applications: applications.count, engagements: engagements.count, auditLogs: auditLogs.count };
+  return {
+    prefix,
+    applications: applications.count,
+    engagements: engagements.count,
+    auditLogs: auditLogs.count,
+    users: users.count,
+    organizations: organizations.count
+  };
 }
 
 async function resetToSeededData(prisma: PrismaClient) {
@@ -213,20 +237,145 @@ async function resetToSeededData(prisma: PrismaClient) {
   await prisma.application.deleteMany();
   await prisma.user.deleteMany();
 
-  const baselineOrganizations = [
+  const baselineOrganizations = await seedOrganizations(prisma);
+  const baselineUsers = await seedUsers(prisma);
+  const baselineApplications = await seedApplications(prisma);
+  const baselineEngagements = await seedEngagements(prisma);
+
+  return {
+    ...cleanup,
+    baselineOrganizations,
+    baselineUsers,
+    baselineApplications: baselineApplications.count,
+    baselineEngagements: baselineEngagements.engagements,
+    baselineScopingRecords: baselineEngagements.scopingRecords
+  };
+}
+
+async function seedOrganizations(prisma: PrismaClient) {
+  const organizations = [
     { name: 'NBP', organizationType: 'NBP' as const },
     { name: 'Paysys Labs', organizationType: 'PAYSYS' as const },
     { name: 'Apprise', organizationType: 'VENDOR' as const },
     { name: 'Auditor', organizationType: 'AUDITOR' as const }
   ];
-
-  for (const organization of baselineOrganizations) {
+  for (const organization of organizations) {
     await prisma.organization.upsert({
       where: { name: organization.name },
       update: { organizationType: organization.organizationType, status: 'ACTIVE' },
       create: organization
     });
   }
+  return organizations.length;
+}
 
-  return { ...cleanup, baselineOrganizations: baselineOrganizations.length };
+async function seedUsers(prisma: PrismaClient) {
+  const organizations = await prisma.organization.findMany();
+  const organizationByName = new Map(organizations.map((organization) => [organization.name, organization.id]));
+  const users = [
+    ['seed-system-admin', 'System Admin', 'system.admin@example.local', 'SYSTEM_ADMIN', 'Auditor'],
+    ['seed-nbp-admin', 'NBP Admin', 'nbp.admin@example.local', 'NBP_SECURITY_ADMIN', 'NBP'],
+    ['seed-nbp-viewer', 'NBP Viewer', 'nbp.viewer@example.local', 'NBP_VIEWER', 'NBP'],
+    ['seed-paysys-admin', 'Paysys Admin', 'paysys.admin@example.local', 'PAYSYS_SECURITY_ADMIN', 'Paysys Labs'],
+    ['seed-paysys-dev', 'Paysys Developer', 'paysys.dev@example.local', 'PAYSYS_DEVELOPER', 'Paysys Labs'],
+    ['seed-apprise-vendor', 'Apprise Vendor', 'apprise.vendor@example.local', 'VENDOR_ADMIN', 'Apprise'],
+    ['seed-auditor', 'External Auditor', 'auditor@example.local', 'AUDITOR', 'Auditor']
+  ] as const;
+  for (const [keycloakUserId, fullName, email, role, organizationName] of users) {
+    const organizationId = organizationByName.get(organizationName);
+    if (!organizationId) throw new Error(`Missing organization for ${organizationName}`);
+    await prisma.user.upsert({
+      where: { email },
+      update: { organizationId, keycloakUserId, fullName, role, status: 'ACTIVE' },
+      create: { organizationId, keycloakUserId, fullName, email, role }
+    });
+  }
+  return users.length;
+}
+
+async function seedApplications(prisma: PrismaClient) {
+  const paysysAdmin = await prisma.user.findUniqueOrThrow({ where: { email: 'paysys.admin@example.local' } });
+  const applications = [
+    ['Seeded Core Banking Portal', 'CRITICAL', false],
+    ['Seeded Mobile Banking API', 'HIGH', true],
+    ['Seeded Internet Banking Web', 'HIGH', true]
+  ] as const;
+  for (const [name, criticality, internetFacing] of applications) {
+    await prisma.application.create({
+      data: {
+        name,
+        description: 'Seeded application for v0.4.0 engagement workflow testing.',
+        businessOwnerName: `${name} Business Owner`,
+        technicalOwnerName: `${name} Technical Owner`,
+        environment: 'PRODUCTION',
+        criticality,
+        technologyStack: 'Seeded technology stack',
+        internetFacing,
+        createdById: paysysAdmin.id
+      }
+    });
+  }
+  return { count: applications.length };
+}
+
+async function seedEngagements(prisma: PrismaClient) {
+  const paysysAdmin = await prisma.user.findUniqueOrThrow({ where: { email: 'paysys.admin@example.local' } });
+  const nbpAdmin = await prisma.user.findUniqueOrThrow({ where: { email: 'nbp.admin@example.local' } });
+  const apprise = await prisma.organization.findUniqueOrThrow({ where: { name: 'Apprise' } });
+  const applications = await prisma.application.findMany({ where: { name: { startsWith: 'Seeded ' } } });
+  const appByName = new Map(applications.map((application) => [application.name, application.id]));
+  const currentYear = new Date().getFullYear();
+  const engagements = [
+    ['Seeded Core Banking Planned Whitebox VAPT', 'Seeded Core Banking Portal', 'WHITEBOX', 'PLANNED', 'August', undefined],
+    ['Seeded Mobile Banking Paysys-Apprise Initiated VAPT', 'Seeded Mobile Banking API', 'BLACK_GREY', 'PAYSYS_APPRISE_INITIATED', 'September', 'DRAFT'],
+    ['Seeded Internet Banking Apprise Assessment VAPT', 'Seeded Internet Banking Web', 'WHITEBOX', 'APPRISE_ASSESSMENT', 'October', 'FINAL'],
+    ['Seeded Core Banking NBP Closing Meeting VAPT', 'Seeded Core Banking Portal', 'BLACK_GREY', 'NBP_IS_REVIEW_CLOSING_MEETING', 'November', 'FINAL'],
+    ['Seeded Mobile Banking Closed VAPT', 'Seeded Mobile Banking API', 'WHITEBOX', 'CLOSED', 'December', 'FINAL']
+  ] as const;
+  let scopingRecords = 0;
+  for (const [title, applicationName, assessmentType, status, plannedMonth, scopingStatus] of engagements) {
+    const applicationId = appByName.get(applicationName);
+    if (!applicationId) throw new Error(`Missing application for ${applicationName}`);
+    const engagement = await prisma.vaptEngagement.create({
+      data: {
+        applicationId,
+        title,
+        assessmentType,
+        plannedYear: currentYear,
+        plannedMonth,
+        vendorOrganizationId: apprise.id,
+        status,
+        createdById: paysysAdmin.id,
+        closedById: status === 'CLOSED' ? nbpAdmin.id : undefined,
+        closedAt: status === 'CLOSED' ? new Date(`${currentYear}-01-15T10:00:00Z`) : undefined,
+        closureNotes: status === 'CLOSED' ? 'Seeded closed engagement for Go-Live transition testing.' : undefined
+      }
+    });
+    if (scopingStatus) {
+      await prisma.scopingRecord.create({
+        data: {
+          engagementId: engagement.id,
+          meetingDate: new Date(`${currentYear}-01-10T00:00:00Z`),
+          meetingTime: '10:00',
+          participants:
+            scopingStatus === 'FINAL'
+              ? 'Paysys Labs Security, Apprise VAPT Team, NBP Information Security optional attendee'
+              : 'Paysys Labs Security, Apprise VAPT Team',
+          minutes: 'Seeded scoping notes for v0.4.0 testing. No passwords are stored.',
+          scopeIncluded: `${applicationName} application and exposed APIs.`,
+          scopeExcluded: 'Production credentials, destructive tests, and out-of-scope third-party systems.',
+          testingWindowStart: new Date(`${currentYear}-01-20T00:00:00Z`),
+          testingWindowEnd: new Date(`${currentYear}-01-30T00:00:00Z`),
+          testAccountsSummary: 'Seeded test account summary only; no passwords stored.',
+          architectureSummary: 'Seeded high-level architecture summary for workflow validation.',
+          recordStatus: scopingStatus,
+          finalizedAt: scopingStatus === 'FINAL' ? new Date(`${currentYear}-01-12T10:00:00Z`) : undefined,
+          finalizedById: scopingStatus === 'FINAL' ? paysysAdmin.id : undefined,
+          createdById: paysysAdmin.id
+        }
+      });
+      scopingRecords += 1;
+    }
+  }
+  return { engagements: engagements.length, scopingRecords };
 }

@@ -828,6 +828,25 @@ PATCH /calendar/:id
 
 Application management is limited to System Admin and Paysys Security Admin. Calendar management is limited to System Admin, NBP Security Admin, and Paysys Security Admin. Calendar entries are VAPT engagements in `PLANNED` status only; full lifecycle status transitions are introduced after this baseline.
 
+## v0.4.0 Engagement and Scoping Implementation
+
+Engagement management is introduced through `/engagements` and `/engagements/:id`. Planned calendar entries now continue into the engagement workflow.
+
+Backend modules:
+
+- `engagements`: list/detail, metadata updates, lifecycle transitions, and scoping record APIs.
+- Transition service rules enforce the documented lifecycle and role boundaries.
+- Audit entries are created for engagement updates, status transitions, scoping creation, scoping updates, and scoping finalization.
+
+Frontend routes:
+
+- `/engagements`
+- `/engagements/:id`
+
+Scoping records capture the Paysys-Apprise initiation meeting details. Bank/NBP attendance is optional for this first meeting. NBP initial scope approval is not required and no formal `Scope Document` artifact is created.
+
+Closure control remains unchanged: only NBP Security Admin may mark an engagement `Closed`; Paysys Security Admin may move `Closed` engagements to `Go-Live`.
+
 ## v0.3.1 Ops and Regression API Baseline
 
 ```text

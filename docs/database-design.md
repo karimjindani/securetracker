@@ -639,6 +639,26 @@ REGRESSION_
 
 Cleanup removes only regression-prefixed application/calendar data and directly related records. Reset removes business workflow records and restores seeded organizations.
 
+## v0.4.0 Seeded Workflow Baseline
+
+Reset now restores baseline organizations, local demo users, seeded applications, seeded engagements, and scoping records.
+
+Seeded applications:
+
+- `Seeded Core Banking Portal`
+- `Seeded Mobile Banking API`
+- `Seeded Internet Banking Web`
+
+Seeded engagement statuses:
+
+- `PLANNED`
+- `PAYSYS_APPRISE_INITIATED`
+- `APPRISE_ASSESSMENT`
+- `NBP_IS_REVIEW_CLOSING_MEETING`
+- `CLOSED`
+
+Scoping records now use `ScopingRecordStatus` with `DRAFT` and `FINAL`. Final scoping records include finalization metadata. Scoping records are not formal Scope Documents and do not store passwords.
+
 ---
 
 # 16. Reference Tables

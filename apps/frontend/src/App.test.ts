@@ -14,5 +14,6 @@ describe('frontend lifecycle contract', () => {
     expect(navigationByRole.AUDITOR).not.toContain('ops');
     expect(navigationByRole.AUDITOR).toContain('applications');
     expect(navigationByRole.AUDITOR).toContain('calendar');
+    expect(navigationByRole.AUDITOR).toContain('engagements');
   });
 });

@@ -10,6 +10,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import SecurityIcon from '@mui/icons-material/Security';
+import TrackChangesIcon from '@mui/icons-material/TrackChanges';
 import {
   Alert,
   AppBar,
@@ -42,14 +43,17 @@ import {
   assessmentTypes,
   canManageApplications,
   canManageCalendar,
+  canManageScoping,
+  engagementStatuses,
   navigationByRole,
   type ApplicationCriticality,
   type ApplicationEnvironment,
   type AssessmentType,
+  type EngagementStatus,
   type Role
 } from '@securetracker/shared';
 import { useEffect, useMemo, useState, type ReactElement } from 'react';
-import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthProvider.js';
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
@@ -76,6 +80,30 @@ interface CalendarEntry {
   plannedEndDate?: string;
   status: string;
   application: ApplicationRecord;
+}
+
+interface ScopingRecord {
+  id: string;
+  meetingDate: string;
+  meetingTime?: string;
+  participants: string;
+  minutes?: string;
+  scopeIncluded: string;
+  scopeExcluded?: string;
+  testingWindowStart?: string;
+  testingWindowEnd?: string;
+  testAccountsSummary?: string;
+  architectureSummary?: string;
+  recordStatus: 'DRAFT' | 'FINAL';
+  finalizedAt?: string;
+}
+
+interface EngagementRecord extends CalendarEntry {
+  actualStartDate?: string;
+  actualEndDate?: string;
+  closureNotes?: string;
+  scopingRecords?: ScopingRecord[];
+  vendorOrganization?: { id: string; name: string };
 }
 
 interface OpsServiceStatus {
@@ -128,6 +156,19 @@ const emptyCalendarForm = {
   plannedEndDate: ''
 };
 
+const emptyScopingForm = {
+  meetingDate: '',
+  meetingTime: '',
+  participants: 'Paysys Labs Security, Apprise VAPT Team',
+  minutes: '',
+  scopeIncluded: '',
+  scopeExcluded: '',
+  testingWindowStart: '',
+  testingWindowEnd: '',
+  testAccountsSummary: '',
+  architectureSummary: ''
+};
+
 const theme = createTheme({
   palette: {
     mode: 'light',
@@ -147,6 +188,7 @@ const navigation = [
   { id: 'dashboard', label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
   { id: 'applications', label: 'Applications', path: '/applications', icon: <AppsIcon /> },
   { id: 'calendar', label: 'VAPT Calendar', path: '/calendar', icon: <CalendarMonthIcon /> },
+  { id: 'engagements', label: 'Engagements', path: '/engagements', icon: <TrackChangesIcon /> },
   { id: 'organizations', label: 'Organizations', path: '/organizations', icon: <BusinessIcon /> },
   { id: 'users', label: 'Users', path: '/users', icon: <PeopleIcon /> },
   { id: 'ops', label: 'Ops Console', path: '/ops', icon: <MonitorHeartIcon /> }
@@ -231,6 +273,8 @@ function ProtectedShell() {
             <Route path="/dashboard" element={<Dashboard role={auth.user.role} />} />
             <Route path="/applications" element={<GuardedPage required="applications" element={<ApplicationsPage />} />} />
             <Route path="/calendar" element={<GuardedPage required="calendar" element={<CalendarPage />} />} />
+            <Route path="/engagements" element={<GuardedPage required="engagements" element={<EngagementsPage />} />} />
+            <Route path="/engagements/:id" element={<GuardedPage required="engagements" element={<EngagementDetailPage />} />} />
             <Route path="/organizations" element={<RestrictedPage required="organizations" title="Organizations" />} />
             <Route path="/users" element={<RestrictedPage required="users" title="Users" />} />
             <Route path="/ops" element={<GuardedPage required="ops" element={<OpsPage />} />} />
@@ -368,7 +412,7 @@ function Dashboard({ role }: { role: Role }) {
     <Stack spacing={3}>
       <Box>
         <Typography variant="h5">Security Dashboard</Typography>
-        <Typography color="text.secondary">Application inventory and planned VAPT calendar baseline for v0.3.0.</Typography>
+        <Typography color="text.secondary">Application inventory, VAPT calendar, and engagement workflow baseline for v0.4.0.</Typography>
       </Box>
       <Paper variant="outlined" sx={{ p: 2.5 }}>
         <Typography variant="h6" gutterBottom>
@@ -574,6 +618,251 @@ function CalendarPage() {
       </Grid>
     </Stack>
   );
+}
+
+function EngagementsPage() {
+  const { apiFetch } = useAuth();
+  const [engagements, setEngagements] = useState<EngagementRecord[]>([]);
+  const [status, setStatus] = useState('');
+  const [search, setSearch] = useState('');
+
+  const loadEngagements = async () => {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (search.trim()) params.set('search', search.trim());
+    const response = await apiFetch(`${apiBaseUrl}/engagements?${params.toString()}`);
+    if (response.ok) setEngagements(await response.json());
+  };
+
+  useEffect(() => {
+    void loadEngagements();
+  }, [status]);
+
+  return (
+    <Stack spacing={3}>
+      <PageTitle title="Engagements" subtitle="Track VAPT engagements from planned initiation through closure and Go-Live." />
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 12, md: 5 }}>
+            <TextField fullWidth label="Search" value={search} onChange={(event) => setSearch(event.target.value)} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <TextField select fullWidth label="Status" value={status} onChange={(event) => setStatus(event.target.value)}>
+              <MenuItem value="">All statuses</MenuItem>
+              {engagementStatuses.map((value) => (
+                <MenuItem key={value} value={value}>{value.replaceAll('_', ' ')}</MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <Button variant="contained" fullWidth sx={{ height: '100%' }} onClick={loadEngagements}>Refresh</Button>
+          </Grid>
+        </Grid>
+      </Paper>
+      <Grid container spacing={2}>
+        {engagements.map((engagement) => (
+          <Grid key={engagement.id} size={{ xs: 12, md: 6 }}>
+            <Paper variant="outlined" sx={{ p: 2.5, height: '100%' }}>
+              <Stack spacing={1.5}>
+                <Stack direction="row" justifyContent="space-between" spacing={1} alignItems="flex-start">
+                  <Typography variant="h6">{engagement.title}</Typography>
+                  <Button size="small" component={Link} to={`/engagements/${engagement.id}`}>Open</Button>
+                </Stack>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  <Chip label={engagement.status.replaceAll('_', ' ')} size="small" />
+                  <Chip label={engagement.assessmentType.replaceAll('_', ' ')} size="small" />
+                  <Chip label={String(engagement.plannedYear)} size="small" />
+                </Stack>
+                <Typography color="text.secondary" variant="body2">Application: {engagement.application.name}</Typography>
+                <Typography color="text.secondary" variant="body2">Vendor: {engagement.vendorOrganization?.name ?? 'Not assigned'}</Typography>
+                <Typography color="text.secondary" variant="body2">Scoping records: {engagement.scopingRecords?.length ?? 0}</Typography>
+              </Stack>
+            </Paper>
+          </Grid>
+        ))}
+      </Grid>
+    </Stack>
+  );
+}
+
+function EngagementDetailPage() {
+  const { id } = useParams();
+  const { user, apiFetch } = useAuth();
+  const [engagement, setEngagement] = useState<EngagementRecord | null>(null);
+  const [form, setForm] = useState(emptyScopingForm);
+  const [message, setMessage] = useState('');
+  const [transitionRemarks, setTransitionRemarks] = useState('');
+  const canScope = Boolean(user && canManageScoping(user.role));
+
+  const loadEngagement = async () => {
+    if (!id) return;
+    const response = await apiFetch(`${apiBaseUrl}/engagements/${id}`);
+    if (response.ok) setEngagement(await response.json());
+  };
+
+  useEffect(() => {
+    void loadEngagement();
+  }, [id]);
+
+  if (!engagement) {
+    return <Alert severity="info">Loading engagement...</Alert>;
+  }
+
+  const nextStatuses = nextEngagementStatuses(engagement.status as EngagementStatus, user?.role);
+  const canTransition = nextStatuses.length > 0;
+
+  const createScopingRecord = async () => {
+    const response = await apiFetch(`${apiBaseUrl}/engagements/${engagement.id}/scoping-records`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...form,
+        meetingTime: form.meetingTime || undefined,
+        minutes: form.minutes || undefined,
+        scopeExcluded: form.scopeExcluded || undefined,
+        testingWindowStart: form.testingWindowStart || undefined,
+        testingWindowEnd: form.testingWindowEnd || undefined,
+        testAccountsSummary: form.testAccountsSummary || undefined,
+        architectureSummary: form.architectureSummary || undefined
+      })
+    });
+    setMessage(response.ok ? 'Scoping record saved.' : 'Scoping record could not be saved.');
+    if (response.ok) {
+      setForm(emptyScopingForm);
+      await loadEngagement();
+    }
+  };
+
+  const finalizeScopingRecord = async (recordId: string) => {
+    const response = await apiFetch(`${apiBaseUrl}/scoping-records/${recordId}/finalize`, { method: 'POST' });
+    setMessage(response.ok ? 'Scoping record finalized.' : 'Scoping record could not be finalized.');
+    if (response.ok) await loadEngagement();
+  };
+
+  const transition = async (targetStatus: EngagementStatus) => {
+    const response = await apiFetch(`${apiBaseUrl}/engagements/${engagement.id}/transitions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetStatus, remarks: transitionRemarks || undefined })
+    });
+    setMessage(response.ok ? `Engagement moved to ${targetStatus.replaceAll('_', ' ')}.` : 'Status transition failed.');
+    if (response.ok) {
+      setTransitionRemarks('');
+      await loadEngagement();
+    }
+  };
+
+  return (
+    <Stack spacing={3}>
+      <PageTitle title={engagement.title} subtitle={`${engagement.application.name} engagement workflow and scoping record.`} />
+      {message && <Alert severity={message.includes('failed') || message.includes('could not') ? 'error' : 'success'}>{message}</Alert>}
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 12, md: 8 }}>
+            <Stack spacing={1.5}>
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                <Chip label={engagement.status.replaceAll('_', ' ')} color={engagement.status === 'CLOSED' ? 'success' : 'default'} />
+                <Chip label={engagement.assessmentType.replaceAll('_', ' ')} />
+                <Chip label={engagement.vendorOrganization?.name ?? 'Vendor not assigned'} />
+              </Stack>
+              <Typography color="text.secondary">Window: {formatDate(engagement.plannedStartDate)} to {formatDate(engagement.plannedEndDate)}</Typography>
+              <Typography color="text.secondary">First meeting: Paysys and Apprise/vendor required; Bank/NBP optional.</Typography>
+              <Typography color="text.secondary">NBP initial scope approval is not required. NBP closure authority is preserved.</Typography>
+            </Stack>
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Stack spacing={1.5}>
+              <TextField fullWidth label="Transition remarks" value={transitionRemarks} onChange={(event) => setTransitionRemarks(event.target.value)} />
+              {canTransition && nextStatuses.map((target) => (
+                <Button key={target} variant="contained" onClick={() => transition(target)}>
+                  Move to {target.replaceAll('_', ' ')}
+                </Button>
+              ))}
+              {nextStatuses.length === 0 && <Typography color="text.secondary" variant="body2">No role-available transitions.</Typography>}
+            </Stack>
+          </Grid>
+        </Grid>
+      </Paper>
+
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
+        <Typography variant="h6" gutterBottom>Scoping Records</Typography>
+        <Stack spacing={2}>
+          {(engagement.scopingRecords ?? []).map((record) => (
+            <Paper key={record.id} variant="outlined" sx={{ p: 2 }}>
+              <Stack spacing={1}>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  <Chip label={record.recordStatus} size="small" />
+                  <Chip label={formatDate(record.meetingDate)} size="small" />
+                  {record.meetingTime && <Chip label={record.meetingTime} size="small" />}
+                </Stack>
+                <Typography variant="body2">Participants: {record.participants}</Typography>
+                <Typography color="text.secondary" variant="body2">Included: {record.scopeIncluded}</Typography>
+                {record.scopeExcluded && <Typography color="text.secondary" variant="body2">Excluded: {record.scopeExcluded}</Typography>}
+                {canScope && record.recordStatus === 'DRAFT' && (
+                  <Button size="small" variant="outlined" onClick={() => finalizeScopingRecord(record.id)}>Finalize scoping record</Button>
+                )}
+              </Stack>
+            </Paper>
+          ))}
+          {(engagement.scopingRecords ?? []).length === 0 && <Typography color="text.secondary">No scoping records yet.</Typography>}
+        </Stack>
+      </Paper>
+
+      {canScope && (
+        <Paper variant="outlined" sx={{ p: 2.5 }}>
+          <Typography variant="h6" gutterBottom>New Scoping Record</Typography>
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <TextField fullWidth label="Meeting date" type="date" InputLabelProps={{ shrink: true }} value={form.meetingDate} onChange={(event) => setForm({ ...form, meetingDate: event.target.value })} />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <TextField fullWidth label="Meeting time" value={form.meetingTime} onChange={(event) => setForm({ ...form, meetingTime: event.target.value })} />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <TextField fullWidth label="Testing start" type="date" InputLabelProps={{ shrink: true }} value={form.testingWindowStart} onChange={(event) => setForm({ ...form, testingWindowStart: event.target.value })} />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField fullWidth multiline minRows={2} label="Participants" value={form.participants} onChange={(event) => setForm({ ...form, participants: event.target.value })} />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField fullWidth multiline minRows={3} label="Scope included" value={form.scopeIncluded} onChange={(event) => setForm({ ...form, scopeIncluded: event.target.value })} />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField fullWidth multiline minRows={3} label="Scope excluded" value={form.scopeExcluded} onChange={(event) => setForm({ ...form, scopeExcluded: event.target.value })} />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField fullWidth multiline minRows={2} label="Test account summary" value={form.testAccountsSummary} onChange={(event) => setForm({ ...form, testAccountsSummary: event.target.value })} />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField fullWidth multiline minRows={2} label="Architecture summary" value={form.architectureSummary} onChange={(event) => setForm({ ...form, architectureSummary: event.target.value })} />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField fullWidth multiline minRows={2} label="Minutes" value={form.minutes} onChange={(event) => setForm({ ...form, minutes: event.target.value })} />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <Button variant="contained" onClick={createScopingRecord} disabled={!form.meetingDate || !form.participants || !form.scopeIncluded}>Save scoping record</Button>
+            </Grid>
+          </Grid>
+        </Paper>
+      )}
+    </Stack>
+  );
+}
+
+function nextEngagementStatuses(status: EngagementStatus, role?: Role): EngagementStatus[] {
+  if (!role) return [];
+  const transitions: Partial<Record<EngagementStatus, EngagementStatus[]>> = {
+    PLANNED: ['PAYSYS_APPRISE_INITIATED'],
+    PAYSYS_APPRISE_INITIATED: ['APPRISE_ASSESSMENT'],
+    NBP_IS_REVIEW_CLOSING_MEETING: ['CLOSED'],
+    CLOSED: ['GO_LIVE']
+  };
+  return (transitions[status] ?? []).filter((target) => {
+    if (target === 'CLOSED') return role === 'NBP_SECURITY_ADMIN';
+    if (target === 'GO_LIVE') return role === 'PAYSYS_SECURITY_ADMIN';
+    if (target === 'APPRISE_ASSESSMENT') return role === 'SYSTEM_ADMIN' || role === 'PAYSYS_SECURITY_ADMIN' || role === 'VENDOR_ADMIN';
+    return role === 'SYSTEM_ADMIN' || role === 'PAYSYS_SECURITY_ADMIN';
+  });
 }
 
 function GuardedPage({ required, element }: { required: string; element: ReactElement }) {

@@ -20,6 +20,11 @@ enum RecordStatus {
   ARCHIVED
 }
 
+enum ScopingRecordStatus {
+  DRAFT
+  FINAL
+}
+
 enum UserRole {
   SYSTEM_ADMIN
   NBP_SECURITY_ADMIN
@@ -178,7 +183,9 @@ model ScopingRecord {
   testingWindowEnd   DateTime?
   testAccountsSummary String?
   architectureSummary String?
-  recordStatus       RecordStatus   @default(ACTIVE)
+  recordStatus       ScopingRecordStatus @default(DRAFT)
+  finalizedAt        DateTime?
+  finalizedById      String?        @db.Uuid
   createdById        String         @db.Uuid
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt

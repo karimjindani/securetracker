@@ -25,6 +25,8 @@ npm run test:regression
 
 These are documented local gates for now. They should be added to CI once ephemeral PostgreSQL, Keycloak, MinIO, SMTP, backend, and frontend services are provisioned inside the workflow.
 
+Starting in `v0.4.0`, regression also covers engagement initiation, scoping finalization, NBP-only closure, and Paysys Go-Live transition checks.
+
 ## Security Scanning
 
 Security scanning is targeted for a later hardening baseline:

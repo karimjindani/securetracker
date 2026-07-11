@@ -1,10 +1,10 @@
 import { PrismaClient } from '@prisma/client';
-import { seedBaselineOrganizations } from '../scripts/test-data-utils.js';
+import { seedBaselineData } from '../scripts/test-data-utils.js';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  await seedBaselineOrganizations(prisma);
+  await seedBaselineData(prisma);
 }
 
 main()

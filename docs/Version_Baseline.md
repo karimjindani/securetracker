@@ -94,3 +94,35 @@ Code reference:
 
 - Branch: `feat/v0.3.1-regression-ops`
 - Version: `0.3.1`
+
+## v0.4.0 - Engagement Initiation and Scoping Workflow
+
+Status: Implemented on feature branch
+
+Baseline contents:
+
+- Engagement list/detail APIs and frontend routes.
+- Paysys-Apprise initiation and scoping record workflow.
+- Scoping records with `DRAFT` and `FINAL` status.
+- Lifecycle transition enforcement for initiation, Apprise assessment, closure, and Go-Live.
+- NBP Security Admin remains the only role authorized to mark an engagement `Closed`.
+- Seeded applications, engagements, and scoping records for repeatable regression testing.
+- Regression coverage for scoping creation/finalization and closure/go-live role boundaries.
+
+Seeded records:
+
+- `Seeded Core Banking Portal`, `Seeded Mobile Banking API`, and `Seeded Internet Banking Web`.
+- Engagements in `PLANNED`, `PAYSYS_APPRISE_INITIATED`, `APPRISE_ASSESSMENT`, `NBP_IS_REVIEW_CLOSING_MEETING`, and `CLOSED`.
+- Draft and final scoping records with no real credentials or passwords.
+
+Documentation references:
+
+- `docs/plans/v0.4.0-engagement-scoping-plan.md`
+- `docs/testing/v0.4.0-test-results.md`
+- `docs/user-guides/v0.4.0-engagement-scoping-user-guide.md`
+- `docs/testing/regression-suite.md`
+
+Code reference:
+
+- Branch: `feat/v0.3.1-regression-ops`
+- Version: `0.4.0`
