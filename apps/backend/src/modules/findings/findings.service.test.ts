@@ -73,7 +73,10 @@ const baseFinding = {
 };
 
 const makeService = (prisma: object) =>
-  new FindingsService(prisma as never, { get: vi.fn().mockReturnValue(undefined) } as never);
+  new FindingsService(prisma as never, { get: vi.fn().mockReturnValue(undefined) } as never, {
+    notifyFindingAssigned: vi.fn().mockResolvedValue(undefined),
+    notifyRevalidationCompleted: vi.fn().mockResolvedValue(undefined)
+  } as never);
 
 describe('FindingsService', () => {
   it('allows vendor to create a finding and audits it', async () => {

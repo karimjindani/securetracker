@@ -18,6 +18,7 @@ import {
 } from '@securetracker/shared';
 import type { CurrentUser } from '../auth/current-user.types.js';
 import { PrismaService } from '../database/prisma.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 
 export interface CreateFindingDto {
   sourceReportVersionId?: string;
@@ -68,7 +69,8 @@ export class FindingsService {
 
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
-    @Inject(ConfigService) private readonly config: ConfigService
+    @Inject(ConfigService) private readonly config: ConfigService,
+    @Inject(NotificationsService) private readonly notifications: NotificationsService
   ) {
     this.bucketName = this.config.get<string>('MINIO_BUCKET') ?? 'vapt-tracker';
     this.minio = new MinioClient({
@@ -171,6 +173,7 @@ export class FindingsService {
     }
     await this.audit(actor, 'FINDING_ASSIGNED', 'FINDING', finding.id, this.auditFinding(before), this.auditFinding(finding));
     await this.audit(actor, 'FINDING_STATUS_CHANGED', 'FINDING', finding.id, { status: oldStatus }, { status: 'ASSIGNED' });
+    await this.notifications.notifyFindingAssigned(finding.id, actor);
     return this.toFindingDto(finding);
   }
 
@@ -285,6 +288,7 @@ export class FindingsService {
       result
     });
     await this.audit(actor, 'FINDING_STATUS_CHANGED', 'FINDING', finding.id, { status: before.status }, { status: targetStatus });
+    await this.notifications.notifyRevalidationCompleted(finding.id, actor);
     return this.toFindingDto(finding);
   }
 

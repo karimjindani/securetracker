@@ -111,6 +111,17 @@ enum RiskAcceptanceStatus {
   CANCELLED
 }
 
+enum NotificationType {
+  ENGAGEMENT_INITIATED
+  ENGAGEMENT_CLOSED
+  REPORT_UPLOADED
+  FINDING_ASSIGNED
+  FINDING_DUE_REMINDER
+  FINDING_OVERDUE
+  REVALIDATION_COMPLETED
+  RISK_ACCEPTANCE_EXPIRING
+}
+
 model Organization {
   id               String           @id @default(uuid()) @db.Uuid
   name             String           @unique @db.VarChar(150)
@@ -146,6 +157,7 @@ model User {
   performedRevalidations Revalidation[] @relation("RevalidationPerformer")
   requestedRiskAcceptances RiskAcceptance[] @relation("RiskAcceptanceRequester")
   reviewedRiskAcceptances RiskAcceptance[] @relation("RiskAcceptanceReviewer")
+  notifications       Notification[]
   auditLogs           AuditLog[]
 }
 
@@ -404,4 +416,25 @@ model AuditLog {
   userAgent      String?
   createdAt      DateTime @default(now())
   user           User?    @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id               String           @id @default(uuid()) @db.Uuid
+  userId           String           @db.Uuid
+  notificationType NotificationType
+  title            String           @db.VarChar(250)
+  message          String
+  entityType       String?          @db.VarChar(80)
+  entityId         String?          @db.Uuid
+  isRead           Boolean          @default(false)
+  emailSent        Boolean          @default(false)
+  emailError       String?
+  createdAt        DateTime         @default(now())
+  readAt           DateTime?
+  user             User             @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([notificationType])
+  @@index([entityType, entityId])
+  @@index([createdAt])
 }

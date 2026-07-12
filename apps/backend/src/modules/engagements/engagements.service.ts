@@ -10,6 +10,7 @@ import {
 } from '@securetracker/shared';
 import type { CurrentUser } from '../auth/current-user.types.js';
 import { PrismaService } from '../database/prisma.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 
 export interface ListEngagementsQuery {
   year?: string;
@@ -66,7 +67,10 @@ const orderedTransitions: Partial<Record<EngagementStatus, EngagementStatus[]>> 
 
 @Injectable()
 export class EngagementsService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(NotificationsService) private readonly notifications: NotificationsService
+  ) {}
 
   list(query: ListEngagementsQuery) {
     const parsedYear = query.year === undefined ? undefined : Number(query.year);
@@ -146,6 +150,7 @@ export class EngagementsService {
       include: { application: true, vendorOrganization: true, createdBy: true, scopingRecords: true }
     });
     await this.audit(actor, 'ENGAGEMENT_STATUS_CHANGED', 'VAPT_ENGAGEMENT', engagement.id, before, engagement, input.remarks);
+    await this.notifications.notifyEngagementStatus(engagement.id, targetStatus, actor);
     return engagement;
   }
 

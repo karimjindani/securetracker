@@ -75,7 +75,8 @@ const reportResponse = {
 const makeService = (prisma: object) => {
   const service = new ReportsService(
     prisma as never,
-    { get: vi.fn().mockReturnValue(undefined) } as never
+    { get: vi.fn().mockReturnValue(undefined) } as never,
+    { notifyReportUploaded: vi.fn().mockResolvedValue(undefined) } as never
   );
   vi.spyOn(service as unknown as { ensureBucket: () => Promise<void> }, 'ensureBucket').mockResolvedValue(undefined);
   vi.spyOn((service as unknown as { minio: { putObject: () => Promise<object> } }).minio, 'putObject').mockResolvedValue({

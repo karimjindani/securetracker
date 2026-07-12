@@ -243,3 +243,34 @@ Code reference:
 
 - Branch: `main`
 - Version: `0.18.2`
+
+## v0.18.3 - Notifications and Email Alerts
+
+Status: Implemented on main
+
+Version allocation:
+
+- `AGENTS.md` required remote version inspection before assigning the code version.
+- `origin/main` was fetched with prune, active remote branches were inspected, and the highest remote version found was `v0.18.2`.
+- This slice therefore uses `v0.18.3`.
+
+Baseline contents:
+
+- Notification records linked to users and workflow entities.
+- In-app notification list, unread count badge, unread filter, mark-read, and mark-all-read actions.
+- Mailpit-backed SMTP email delivery for notification events with non-blocking delivery failure handling.
+- Workflow triggers for engagement initiation/closure, report upload, finding assignment, revalidation completion, due reminders, overdue findings, and risk acceptance expiry.
+- System Admin due-check execution for deterministic local validation.
+- Cleanup/reset support for regression notification data.
+
+Documentation references:
+
+- `docs/plans/v0.18.3-notifications-plan.md`
+- `docs/testing/v0.18.3-test-results.md`
+- `docs/user-guides/v0.18.3-notifications-user-guide.md`
+- `docs/testing/regression-suite.md`
+
+Code reference:
+
+- Branch: `main`
+- Version: `0.18.3`

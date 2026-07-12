@@ -35,6 +35,8 @@ docker compose up -d
 
 The Compose stack includes PostgreSQL, Keycloak, MinIO, Mailpit, backend API, and the Nginx-served frontend.
 
+Notification email delivery uses the SMTP settings in `.env.example`. Local Compose points the backend to the `smtp-test-service` Mailpit container, and delivered messages can be reviewed in the SMTP test UI.
+
 For local source-level development, backend and frontend can still be started separately:
 
 ```powershell

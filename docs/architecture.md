@@ -736,6 +736,13 @@ Recommended MVP approach:
 Backend API → SMTP Server
 ```
 
+Implemented in v0.18.3:
+
+- Backend notification service creates in-app notification records.
+- SMTP/Mailpit email delivery is best-effort and never blocks the originating workflow action.
+- Users can view notifications, unread counts, and mark notifications as read.
+- System Admin can run deterministic due/overdue/risk-expiry checks from the Notifications page.
+
 Future option:
 
 ```text

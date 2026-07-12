@@ -573,8 +573,20 @@ Stores in-app and email notification records.
 | entity_id | UUID | No | Related entity ID |
 | is_read | BOOLEAN | Yes | Read flag |
 | email_sent | BOOLEAN | Yes | Email sent flag |
+| email_error | TEXT | No | Email delivery error when SMTP send fails |
 | created_at | TIMESTAMP | Yes | Creation timestamp |
 | read_at | TIMESTAMP | No | Read timestamp |
+
+Notification types:
+
+- `ENGAGEMENT_INITIATED`
+- `ENGAGEMENT_CLOSED`
+- `REPORT_UPLOADED`
+- `FINDING_ASSIGNED`
+- `FINDING_DUE_REMINDER`
+- `FINDING_OVERDUE`
+- `REVALIDATION_COMPLETED`
+- `RISK_ACCEPTANCE_EXPIRING`
 
 ---
 

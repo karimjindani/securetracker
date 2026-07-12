@@ -7,6 +7,7 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import DownloadIcon from '@mui/icons-material/Download';
 import LogoutIcon from '@mui/icons-material/Logout';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 import PeopleIcon from '@mui/icons-material/People';
 import SecurityIcon from '@mui/icons-material/Security';
 import TrackChangesIcon from '@mui/icons-material/TrackChanges';
@@ -15,6 +16,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import {
   Alert,
   AppBar,
+  Badge,
   Box,
   Button,
   Chip,
@@ -84,6 +86,7 @@ import {
   type ReportType,
   type RevalidationResult,
   type RiskAcceptanceStatus,
+  type NotificationType,
   type Role
 } from '@securetracker/shared';
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist';
@@ -150,6 +153,20 @@ interface AuditLogRecord {
   ipAddress?: string;
   createdAt: string;
   user?: { fullName: string; email: string };
+}
+
+interface NotificationRecord {
+  id: string;
+  notificationType: NotificationType;
+  title: string;
+  message: string;
+  entityType?: string;
+  entityId?: string;
+  isRead: boolean;
+  emailSent: boolean;
+  emailError?: string;
+  createdAt: string;
+  readAt?: string;
 }
 
 interface CalendarEntry {
@@ -393,6 +410,7 @@ const navigation = [
   { id: 'engagements', label: 'Engagements', path: '/engagements', icon: <TrackChangesIcon /> },
   { id: 'organizations', label: 'Organizations', path: '/organizations', icon: <BusinessIcon /> },
   { id: 'users', label: 'Users', path: '/users', icon: <PeopleIcon /> },
+  { id: 'notifications', label: 'Notifications', path: '/notifications', icon: <NotificationsIcon /> },
   { id: 'audit', label: 'Audit', path: '/audit', icon: <AdminPanelSettingsIcon /> }
 ];
 
@@ -415,6 +433,7 @@ export function App() {
 function ProtectedShell() {
   const auth = useAuth();
   const location = useLocation();
+  const [unreadCount, setUnreadCount] = useState(0);
 
   if (auth.status === 'loading') {
     return <LoadingState />;
@@ -425,6 +444,18 @@ function ProtectedShell() {
   }
 
   const allowedNavigation = navigation.filter((item) => navigationByRole[auth.user.role].includes(item.id));
+
+  const refreshUnreadCount = async () => {
+    const response = await auth.apiFetch(`${apiBaseUrl}/notifications/unread-count`);
+    if (response.ok) {
+      const body = (await response.json()) as { count: number };
+      setUnreadCount(body.count);
+    }
+  };
+
+  useEffect(() => {
+    void refreshUnreadCount();
+  }, [auth.user.id]);
 
   return (
     <>
@@ -452,7 +483,15 @@ function ProtectedShell() {
                 to={item.path}
                 selected={location.pathname === item.path}
               >
-                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemIcon>
+                  {item.id === 'notifications' ? (
+                    <Badge color="error" badgeContent={unreadCount} max={99}>
+                      {item.icon}
+                    </Badge>
+                  ) : (
+                    item.icon
+                  )}
+                </ListItemIcon>
                 <ListItemText primary={item.label} />
               </ListItemButton>
             ))}
@@ -477,6 +516,7 @@ function ProtectedShell() {
             <Route path="/engagements/:id" element={<GuardedPage required="engagements" element={<EngagementDetailPage />} />} />
             <Route path="/organizations" element={<GuardedPage required="organizations" element={<OrganizationsPage />} />} />
             <Route path="/users" element={<GuardedPage required="users" element={<UsersPage />} />} />
+            <Route path="/notifications" element={<GuardedPage required="notifications" element={<NotificationsPage onChanged={refreshUnreadCount} />} />} />
             <Route path="/audit" element={<GuardedPage required="audit" element={<AuditPage />} />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
@@ -2113,6 +2153,133 @@ function AuditPage() {
           </Paper>
         ))}
       </Stack>
+    </Stack>
+  );
+}
+
+function NotificationsPage({ onChanged }: { onChanged: () => void }) {
+  const { apiFetch, user } = useAuth();
+  const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
+  const [message, setMessage] = useState('');
+  const [unreadOnly, setUnreadOnly] = useState(false);
+
+  const load = async () => {
+    const response = await apiFetch(`${apiBaseUrl}/notifications`);
+    if (response.ok) {
+      setNotifications(await response.json());
+      setMessage('');
+    } else {
+      setMessage('Notifications could not be loaded.');
+    }
+  };
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  const markRead = async (id: string) => {
+    const response = await apiFetch(`${apiBaseUrl}/notifications/${id}/read`, { method: 'POST' });
+    if (!response.ok) {
+      setMessage('Notification could not be marked as read.');
+      return;
+    }
+    await load();
+    onChanged();
+  };
+
+  const markAllRead = async () => {
+    const response = await apiFetch(`${apiBaseUrl}/notifications/read-all`, { method: 'POST' });
+    if (!response.ok) {
+      setMessage('Notifications could not be marked as read.');
+      return;
+    }
+    await load();
+    onChanged();
+  };
+
+  const runChecks = async () => {
+    const response = await apiFetch(`${apiBaseUrl}/notifications/run-due-checks`, { method: 'POST' });
+    if (response.ok) {
+      const result = await response.json();
+      setMessage(`Notification checks complete. ${result.created} new notifications created.`);
+      await load();
+      onChanged();
+    } else {
+      setMessage('Notification checks could not be run.');
+    }
+  };
+
+  const visible = notifications.filter((entry) => !unreadOnly || !entry.isRead);
+
+  return (
+    <Stack spacing={3}>
+      <PageTitle title="Notifications" subtitle="In-app and email alerts for workflow activity and due work." />
+      {message && <Alert severity={message.includes('complete') ? 'success' : 'error'}>{message}</Alert>}
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'stretch', md: 'center' }} justifyContent="space-between">
+          <FormControlLabel
+            control={<Switch checked={unreadOnly} onChange={(event) => setUnreadOnly(event.target.checked)} />}
+            label="Unread only"
+          />
+          <Stack direction="row" spacing={1}>
+            <Button variant="outlined" onClick={markAllRead} disabled={notifications.every((entry) => entry.isRead)}>
+              Mark all read
+            </Button>
+            {user?.role === 'SYSTEM_ADMIN' && (
+              <Button variant="contained" onClick={runChecks}>
+                Run checks
+              </Button>
+            )}
+          </Stack>
+        </Stack>
+      </Paper>
+      <TableContainer component={Paper} variant="outlined">
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell>Status</TableCell>
+              <TableCell>Type</TableCell>
+              <TableCell>Message</TableCell>
+              <TableCell>Email</TableCell>
+              <TableCell>Created</TableCell>
+              <TableCell align="right">Action</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {visible.map((entry) => (
+              <TableRow key={entry.id} hover>
+                <TableCell>
+                  <Chip label={entry.isRead ? 'Read' : 'Unread'} size="small" color={entry.isRead ? 'default' : 'primary'} />
+                </TableCell>
+                <TableCell>{entry.notificationType.replaceAll('_', ' ')}</TableCell>
+                <TableCell>
+                  <Typography variant="body2" fontWeight={700}>{entry.title}</Typography>
+                  <Typography variant="body2" color="text.secondary">{entry.message}</Typography>
+                  {entry.entityType && <Typography variant="caption" color="text.secondary">{entry.entityType}: {entry.entityId}</Typography>}
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={entry.emailSent ? 'Sent' : entry.emailError ? 'Failed' : 'Not sent'}
+                    color={entry.emailSent ? 'success' : entry.emailError ? 'warning' : 'default'}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>{formatDate(entry.createdAt)}</TableCell>
+                <TableCell align="right">
+                  <Button size="small" onClick={() => markRead(entry.id)} disabled={entry.isRead}>Mark read</Button>
+                </TableCell>
+              </TableRow>
+            ))}
+            {visible.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6}>
+                  <Alert severity="info">No notifications match the current filter.</Alert>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
     </Stack>
   );
 }

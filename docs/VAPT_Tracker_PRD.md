@@ -11,6 +11,9 @@ The current implementation includes API-backed Organizations and Users pages, ri
 ### v0.18.2 Implementation Note
 Applications, VAPT Calendar, Engagements, Organizations, and Users now present list data in tables with filters. Dashboard remains in summary-card form.
 
+### v0.18.3 Implementation Note
+Notifications are implemented as in-app records with unread counts, mark-read actions, System Admin due-check execution, and Mailpit-backed email delivery for workflow events.
+
 ---
 
 # Business Objectives
@@ -286,6 +289,9 @@ Notifications for:
 - Due date reminders
 - Revalidation completion
 - Risk acceptance expiry
+- Engagement closure
+
+Implementation note: notification emails are best-effort; workflow actions remain successful if SMTP delivery fails.
 
 ---
 

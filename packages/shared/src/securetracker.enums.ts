@@ -71,6 +71,19 @@ export type RevalidationResult = typeof revalidationResults[number];
 export const riskAcceptanceStatuses = ['REQUESTED', 'APPROVED', 'REJECTED', 'EXPIRED', 'CANCELLED'] as const;
 export type RiskAcceptanceStatus = typeof riskAcceptanceStatuses[number];
 
+export const notificationTypes = [
+  'ENGAGEMENT_INITIATED',
+  'ENGAGEMENT_CLOSED',
+  'REPORT_UPLOADED',
+  'FINDING_ASSIGNED',
+  'FINDING_DUE_REMINDER',
+  'FINDING_OVERDUE',
+  'REVALIDATION_COMPLETED',
+  'RISK_ACCEPTANCE_EXPIRING'
+] as const;
+
+export type NotificationType = typeof notificationTypes[number];
+
 export const assessmentTypes = ['WHITEBOX', 'BLACK_GREY'] as const;
 export type AssessmentType = typeof assessmentTypes[number];
 
@@ -132,13 +145,13 @@ export const canManageOrganizations = (role: Role): boolean => role === 'SYSTEM_
 export const canManageUsers = (role: Role): boolean => role === 'SYSTEM_ADMIN';
 
 export const navigationByRole: Record<Role, string[]> = {
-  SYSTEM_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'users', 'audit'],
-  NBP_SECURITY_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'audit'],
-  NBP_VIEWER: ['dashboard', 'applications', 'calendar', 'engagements'],
-  PAYSYS_SECURITY_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'audit'],
-  PAYSYS_DEVELOPER: ['dashboard', 'applications', 'calendar', 'engagements'],
-  VENDOR_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements'],
-  AUDITOR: ['dashboard', 'applications', 'calendar', 'engagements', 'audit']
+  SYSTEM_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'users', 'notifications', 'audit'],
+  NBP_SECURITY_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'notifications', 'audit'],
+  NBP_VIEWER: ['dashboard', 'applications', 'calendar', 'engagements', 'notifications'],
+  PAYSYS_SECURITY_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'notifications', 'audit'],
+  PAYSYS_DEVELOPER: ['dashboard', 'applications', 'calendar', 'engagements', 'notifications'],
+  VENDOR_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'notifications'],
+  AUDITOR: ['dashboard', 'applications', 'calendar', 'engagements', 'notifications', 'audit']
 };
 
 export const isRole = (value: string): value is Role => roles.includes(value as Role);

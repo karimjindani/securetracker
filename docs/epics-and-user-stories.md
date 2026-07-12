@@ -1039,6 +1039,22 @@ Not implemented in v0.11.3:
 
 ---
 
+# v0.18.3 Implementation Status
+
+Implemented:
+
+- Epic 13 notifications with in-app records, unread counts, mark-read actions, and Mailpit-backed email delivery.
+- Assignment notifications for Paysys Developers.
+- Due date reminders, overdue finding escalation notifications, and risk acceptance expiry notifications through System Admin due-check execution.
+- Report upload, revalidation completion, engagement initiation, and engagement closure notifications.
+
+Not implemented in v0.18.3:
+
+- Epic 16 reference data and system configuration administration.
+- Production queue-based notification delivery and advanced scheduling controls.
+
+---
+
 # Phase 2 Scope
 
 Epic 10 – Remediation Evidence

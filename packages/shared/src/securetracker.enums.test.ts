@@ -15,6 +15,7 @@ import {
   engagementStatuses,
   findingStatuses,
   navigationByRole,
+  notificationTypes,
   riskAcceptanceStatuses
 } from './securetracker.enums.js';
 
@@ -45,8 +46,14 @@ describe('securetracker shared enums', () => {
     expect(canManageScoping('PAYSYS_SECURITY_ADMIN')).toBe(true);
     expect(canManageScoping('NBP_SECURITY_ADMIN')).toBe(false);
     expect(canManageUsers('SYSTEM_ADMIN')).toBe(true);
-    expect(navigationByRole.AUDITOR).toEqual(['dashboard', 'applications', 'calendar', 'engagements', 'audit']);
+    expect(navigationByRole.AUDITOR).toEqual(['dashboard', 'applications', 'calendar', 'engagements', 'notifications', 'audit']);
     expect(navigationByRole.PAYSYS_SECURITY_ADMIN).not.toContain('users');
+  });
+
+  it('exposes notification events and navigation', () => {
+    expect(notificationTypes).toContain('FINDING_ASSIGNED');
+    expect(notificationTypes).toContain('RISK_ACCEPTANCE_EXPIRING');
+    expect(navigationByRole.PAYSYS_DEVELOPER).toContain('notifications');
   });
 
   it('exposes finding and evidence lifecycle constants', () => {

@@ -6,6 +6,7 @@ import type { Readable } from 'node:stream';
 import { canUploadReports, reportTypes, type ReportType } from '@securetracker/shared';
 import type { CurrentUser } from '../auth/current-user.types.js';
 import { PrismaService } from '../database/prisma.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 
 export interface CreateReportDto {
   reportType?: ReportType;
@@ -30,7 +31,8 @@ export class ReportsService {
 
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
-    @Inject(ConfigService) private readonly config: ConfigService
+    @Inject(ConfigService) private readonly config: ConfigService,
+    @Inject(NotificationsService) private readonly notifications: NotificationsService
   ) {
     this.bucketName = this.config.get<string>('MINIO_BUCKET') ?? 'vapt-tracker';
     this.minio = new MinioClient({
@@ -96,6 +98,7 @@ export class ReportsService {
 
     await this.applyReportWorkflow(engagement.id, engagement.status, reportType);
     await this.audit(actor, 'REPORT_UPLOADED', 'REPORT', report.id, undefined, this.auditReport(report));
+    await this.notifications.notifyReportUploaded(report.id, actor);
     return this.toReportDto(report);
   }
 
@@ -136,6 +139,7 @@ export class ReportsService {
     });
 
     await this.audit(actor, 'REPORT_VERSION_UPLOADED', 'REPORT_VERSION', version.id, undefined, this.auditVersion(version));
+    await this.notifications.notifyReportUploaded(report.id, actor);
     return this.toReportDto(updated);
   }
 

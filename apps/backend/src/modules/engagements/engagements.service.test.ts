@@ -23,6 +23,10 @@ const nbpActor: CurrentUser = {
   organizationType: 'NBP'
 };
 
+const notifications = {
+  notifyEngagementStatus: vi.fn().mockResolvedValue(undefined)
+};
+
 describe('EngagementsService', () => {
   it('blocks non-NBP users from closing an engagement', async () => {
     const prisma = {
@@ -37,7 +41,7 @@ describe('EngagementsService', () => {
     };
 
     await expect(
-      new EngagementsService(prisma as never).transition(
+      new EngagementsService(prisma as never, notifications as never).transition(
         'eng-1',
         { targetStatus: 'CLOSED', remarks: 'Closing meeting complete' },
         paysysActor
@@ -58,7 +62,7 @@ describe('EngagementsService', () => {
       }
     };
 
-    const result = await new EngagementsService(prisma as never).transition(
+    const result = await new EngagementsService(prisma as never, notifications as never).transition(
       'eng-1',
       { targetStatus: 'CLOSED', remarks: 'Closing meeting complete' },
       nbpActor
@@ -96,7 +100,7 @@ describe('EngagementsService', () => {
       }
     };
 
-    const result = await new EngagementsService(prisma as never).finalizeScopingRecord('scope-1', paysysActor);
+    const result = await new EngagementsService(prisma as never, notifications as never).finalizeScopingRecord('scope-1', paysysActor);
 
     expect(result).toBe(after);
     expect(prisma.scopingRecord.update).toHaveBeenCalledWith(

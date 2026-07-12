@@ -42,14 +42,16 @@ npm.cmd run ops
 - Auditor searches audit logs and exports CSV.
 - Applications, VAPT Calendar, Engagements, Organizations, and Users render list data in tables.
 - List page filters update visible table rows while Dashboard remains metric-card based.
+- Notifications are created for assignment and due-check paths.
+- Users can view notifications, mark them read, and see unread counts update.
 
 ## Future Coverage Placeholders
 
-Pending specs remain for notifications, reference data administration, and system configuration.
+Pending specs remain for reference data administration, system configuration, and deeper production notification scheduling.
 
 ## Data Safety
 
-Regression-generated records must use the `REGRESSION_` prefix. Cleanup deletes only regression-prefixed applications, engagements, scoping records, report metadata, report versions, users, organizations, risk acceptance records, and related audit records. Reset removes business workflow data and restores seeded organizations, demo users, applications, engagements, and scoping records.
+Regression-generated records must use the `REGRESSION_` prefix. Cleanup deletes only regression-prefixed applications, engagements, scoping records, report metadata, report versions, users, organizations, risk acceptance records, notifications, and related audit records. Reset removes business workflow data and restores seeded organizations, demo users, applications, engagements, and scoping records.
 
 The external Ops Console at `http://127.0.0.1:3300` provides buttons for running regression, cleanup, and reset. It streams real command logs so startup and dependency failures are visible.
 

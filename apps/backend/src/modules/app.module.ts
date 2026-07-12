@@ -10,6 +10,7 @@ import { EngagementsModule } from './engagements/engagements.module.js';
 import { FindingsModule } from './findings/findings.module.js';
 import { HealthModule } from './health/health.module.js';
 import { OrganizationsModule } from './organizations/organizations.module.js';
+import { NotificationsModule } from './notifications/notifications.module.js';
 import { ReportsModule } from './reports/reports.module.js';
 import { RiskAcceptanceModule } from './risk-acceptance/risk-acceptance.module.js';
 import { UsersModule } from './users/users.module.js';
@@ -28,6 +29,7 @@ import { UsersModule } from './users/users.module.js';
     FindingsModule,
     ReportsModule,
     RiskAcceptanceModule,
+    NotificationsModule,
     OrganizationsModule,
     UsersModule
   ]

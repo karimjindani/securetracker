@@ -10,6 +10,7 @@ export interface CleanupSummary {
   auditLogs: number;
   users: number;
   organizations: number;
+  notifications: number;
   reportObjects: number;
 }
 
@@ -77,6 +78,14 @@ export async function cleanupRegressionData(prisma = new PrismaClient()): Promis
       ]
     }
   });
+  const notifications = await prisma.notification.deleteMany({
+    where: {
+      OR: [
+        { userId: { in: userIds } },
+        { entityId: { in: [...engagementIds, ...applicationIds, ...userIds, ...organizationIds, ...riskAcceptanceIds] } }
+      ]
+    }
+  });
   await prisma.revalidation.deleteMany({ where: { engagementId: { in: engagementIds } } });
   await prisma.riskAcceptance.deleteMany({ where: { id: { in: riskAcceptanceIds } } });
   await prisma.findingEvidence.deleteMany({ where: { finding: { engagementId: { in: engagementIds } } } });
@@ -103,6 +112,7 @@ export async function cleanupRegressionData(prisma = new PrismaClient()): Promis
     auditLogs: auditLogs.count,
     users: users.count,
     organizations: organizations.count,
+    notifications: notifications.count,
     reportObjects: reportObjects + evidenceObjects
   };
 }
@@ -128,6 +138,7 @@ export async function resetToSeededData(prisma = new PrismaClient()): Promise<Re
   const cleanup = await cleanupRegressionData(prisma);
 
   await prisma.auditLog.deleteMany();
+  await prisma.notification.deleteMany();
   await prisma.revalidation.deleteMany();
   await prisma.riskAcceptance.deleteMany();
   await prisma.findingEvidence.deleteMany();
