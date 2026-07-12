@@ -1057,3 +1057,7 @@ The architecture is successful if:
 # v0.11.3 Implementation Note
 
 The current implemented architecture includes API-backed Organizations and Users portal pages, a Risk Acceptance module, a Dashboard module, and an Audit Search/Export module. Risk acceptance is linked to findings and engagements, reviewed by NBP Security Admin, and updates approved findings to `RISK_ACCEPTED`. Dashboard metrics are computed live from PostgreSQL. Audit export produces CSV from filtered audit log records and records an `AUDIT_EXPORTED` event.
+
+## v0.18.2 UI Note
+
+List-heavy portal pages use responsive tables for Applications, VAPT Calendar, Engagements, Organizations, and Users. Dashboard remains metric-card based because it is intended for summary visibility rather than row scanning.

@@ -14,4 +14,13 @@ describe('frontend lifecycle contract', () => {
     expect(navigationByRole.AUDITOR).toContain('calendar');
     expect(navigationByRole.AUDITOR).toContain('engagements');
   });
+
+  it('keeps list-heavy pages available for tabular workflows', () => {
+    expect(navigationByRole.SYSTEM_ADMIN).toEqual(
+      expect.arrayContaining(['applications', 'calendar', 'engagements', 'organizations', 'users'])
+    );
+    expect(navigationByRole.PAYSYS_SECURITY_ADMIN).toEqual(
+      expect.arrayContaining(['applications', 'calendar', 'engagements', 'organizations'])
+    );
+  });
 });

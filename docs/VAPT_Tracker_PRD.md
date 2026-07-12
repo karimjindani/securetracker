@@ -8,6 +8,9 @@ The VAPT Tracker Portal is a centralized platform used by NBP, Paysys Labs, and 
 ### v0.11.3 Implementation Note
 The current implementation includes API-backed Organizations and Users pages, risk acceptance request/review, live dashboard metrics, and audit search/export in addition to the prior report, finding, evidence, and revalidation workflows. Notifications remain a later slice.
 
+### v0.18.2 Implementation Note
+Applications, VAPT Calendar, Engagements, Organizations, and Users now present list data in tables with filters. Dashboard remains in summary-card form.
+
 ---
 
 # Business Objectives

@@ -214,3 +214,32 @@ Code reference:
 
 - Branch: `main`
 - Version: `0.11.3`
+
+## v0.18.2 - Tabular List UX
+
+Status: Implemented on main
+
+Version allocation:
+
+- `AGENTS.md` required remote version inspection before assigning the code version.
+- After pushing the governance baseline, `origin/main` contained `v0.18.1` as the highest allocated version.
+- This slice therefore uses `v0.18.2`.
+
+Baseline contents:
+
+- Applications, VAPT Calendar, Engagements, Organizations, and Users render list data in responsive tables.
+- Filters/search controls update table rows on the relevant pages.
+- Empty states are displayed inside table rows.
+- Dashboard metrics remain unchanged.
+
+Documentation references:
+
+- `docs/plans/v0.18.2-tabular-list-ux-plan.md`
+- `docs/testing/v0.18.2-test-results.md`
+- `docs/user-guides/v0.18.2-tabular-list-ux-user-guide.md`
+- `docs/testing/regression-suite.md`
+
+Code reference:
+
+- Branch: `main`
+- Version: `0.18.2`

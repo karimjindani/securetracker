@@ -40,6 +40,8 @@ npm.cmd run ops
 - Paysys requests risk acceptance, NBP approves/rejects, and approved risks update findings.
 - Dashboard metrics include accepted risks and finding counts.
 - Auditor searches audit logs and exports CSV.
+- Applications, VAPT Calendar, Engagements, Organizations, and Users render list data in tables.
+- List page filters update visible table rows while Dashboard remains metric-card based.
 
 ## Future Coverage Placeholders
 

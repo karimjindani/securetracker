@@ -38,6 +38,12 @@ import {
   Paper,
   Stack,
   Switch,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
   ThemeProvider,
   Toolbar,
@@ -592,17 +598,20 @@ function ApplicationsPage() {
   const { user, apiFetch } = useAuth();
   const [applications, setApplications] = useState<ApplicationRecord[]>([]);
   const [form, setForm] = useState(emptyApplicationForm);
+  const [search, setSearch] = useState('');
   const [message, setMessage] = useState('');
   const canManage = Boolean(user && canManageApplications(user.role));
 
   const loadApplications = async () => {
-    const response = await apiFetch(`${apiBaseUrl}/applications`);
+    const params = new URLSearchParams();
+    if (search.trim()) params.set('search', search.trim());
+    const response = await apiFetch(`${apiBaseUrl}/applications?${params.toString()}`);
     if (response.ok) setApplications(await response.json());
   };
 
   useEffect(() => {
     void loadApplications();
-  }, []);
+  }, [search]);
 
   const submit = async () => {
     const response = await apiFetch(`${apiBaseUrl}/applications`, {
@@ -662,20 +671,46 @@ function ApplicationsPage() {
           </Grid>
         </Paper>
       )}
-      <Grid container spacing={2}>
-        {applications.map((application) => (
-          <Grid key={application.id} size={{ xs: 12, md: 6 }}>
-            <RecordCard
-              title={application.name}
-              chips={[application.criticality, application.environment, application.internetFacing ? 'INTERNET FACING' : 'INTERNAL']}
-              lines={[
-                `Business owner: ${application.businessOwnerName ?? 'Not set'}`,
-                `Technical owner: ${application.technicalOwnerName ?? 'Not set'}`
-              ]}
-            />
-          </Grid>
-        ))}
-      </Grid>
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
+        <Stack spacing={2}>
+          <TextField fullWidth label="Search applications" value={search} onChange={(event) => setSearch(event.target.value)} />
+          <TableContainer sx={{ overflowX: 'auto' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Name</TableCell>
+                  <TableCell>Environment</TableCell>
+                  <TableCell>Criticality</TableCell>
+                  <TableCell>Exposure</TableCell>
+                  <TableCell>Business Owner</TableCell>
+                  <TableCell>Technical Owner</TableCell>
+                  <TableCell>Status</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {applications.map((application) => (
+                  <TableRow key={application.id} hover>
+                    <TableCell>{application.name}</TableCell>
+                    <TableCell>{application.environment}</TableCell>
+                    <TableCell><Chip size="small" label={application.criticality} /></TableCell>
+                    <TableCell>{application.internetFacing ? 'Internet facing' : 'Internal'}</TableCell>
+                    <TableCell>{application.businessOwnerName ?? 'Not set'}</TableCell>
+                    <TableCell>{application.technicalOwnerName ?? 'Not set'}</TableCell>
+                    <TableCell>{application.status}</TableCell>
+                  </TableRow>
+                ))}
+                {applications.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7}>
+                      <Alert severity="info">No applications match the current filter.</Alert>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Stack>
+      </Paper>
     </Stack>
   );
 }
@@ -684,9 +719,20 @@ function OrganizationsPage() {
   const { user, apiFetch } = useAuth();
   const [organizations, setOrganizations] = useState<OrganizationRecord[]>([]);
   const [form, setForm] = useState(emptyOrganizationForm);
+  const [filters, setFilters] = useState({ search: '', type: '', status: '' });
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const canManage = Boolean(user && canManageOrganizations(user.role));
+  const filteredOrganizations = useMemo(
+    () =>
+      organizations.filter((organization) => {
+        const matchesSearch = organization.name.toLowerCase().includes(filters.search.toLowerCase().trim());
+        const matchesType = !filters.type || organization.organizationType === filters.type;
+        const matchesStatus = !filters.status || organization.status === filters.status;
+        return matchesSearch && matchesType && matchesStatus;
+      }),
+    [organizations, filters]
+  );
 
   const loadOrganizations = async () => {
     setLoading(true);
@@ -744,21 +790,62 @@ function OrganizationsPage() {
           </Grid>
         </Paper>
       )}
-      {loading ? <LinearProgress /> : (
-        <Grid container spacing={2}>
-          {organizations.length === 0 && <Grid size={{ xs: 12 }}><Alert severity="info">No organizations found.</Alert></Grid>}
-          {organizations.map((organization) => (
-            <Grid key={organization.id} size={{ xs: 12, md: 6 }}>
-              <RecordCard
-                title={organization.name}
-                chips={[organization.organizationType, organization.status]}
-                lines={[canManage ? 'Select edit to update this organization.' : 'Read-only organization record.']}
-              />
-              {canManage && <Button sx={{ mt: 1 }} size="small" onClick={() => setForm(organization)}>Edit</Button>}
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
+        <Stack spacing={2}>
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField fullWidth label="Search organizations" value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} />
             </Grid>
-          ))}
-        </Grid>
-      )}
+            <Grid size={{ xs: 12, md: 3 }}>
+              <TextField select fullWidth label="Type" value={filters.type} onChange={(event) => setFilters({ ...filters, type: event.target.value })}>
+                <MenuItem value="">All types</MenuItem>
+                {organizationTypes.map((type) => <MenuItem key={type} value={type}>{type}</MenuItem>)}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <TextField select fullWidth label="Status" value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })}>
+                <MenuItem value="">All statuses</MenuItem>
+                {['ACTIVE', 'INACTIVE', 'ARCHIVED'].map((status) => <MenuItem key={status} value={status}>{status}</MenuItem>)}
+              </TextField>
+            </Grid>
+          </Grid>
+          {loading ? <LinearProgress /> : (
+            <TableContainer sx={{ overflowX: 'auto' }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Type</TableCell>
+                    <TableCell>Status</TableCell>
+                    {canManage && <TableCell>Action</TableCell>}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredOrganizations.map((organization) => (
+                    <TableRow key={organization.id} hover>
+                      <TableCell>{organization.name}</TableCell>
+                      <TableCell>{organization.organizationType}</TableCell>
+                      <TableCell>{organization.status}</TableCell>
+                      {canManage && (
+                        <TableCell>
+                          <Button size="small" onClick={() => setForm(organization)}>Edit</Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                  {filteredOrganizations.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={canManage ? 4 : 3}>
+                        <Alert severity="info">No organizations match the current filters.</Alert>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </Stack>
+      </Paper>
     </Stack>
   );
 }
@@ -768,9 +855,22 @@ function UsersPage() {
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [organizations, setOrganizations] = useState<OrganizationRecord[]>([]);
   const [form, setForm] = useState(emptyUserForm);
+  const [filters, setFilters] = useState({ search: '', organizationId: '', role: '', status: '' });
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const canManage = Boolean(user && canManageUsers(user.role));
+  const filteredUsers = useMemo(
+    () =>
+      users.filter((record) => {
+        const haystack = `${record.fullName} ${record.email}`.toLowerCase();
+        const matchesSearch = haystack.includes(filters.search.toLowerCase().trim());
+        const matchesOrganization = !filters.organizationId || record.organizationId === filters.organizationId;
+        const matchesRole = !filters.role || record.role === filters.role;
+        const matchesStatus = !filters.status || record.status === filters.status;
+        return matchesSearch && matchesOrganization && matchesRole && matchesStatus;
+      }),
+    [users, filters]
+  );
 
   const load = async () => {
     setLoading(true);
@@ -846,21 +946,72 @@ function UsersPage() {
           </Grid>
         </Paper>
       )}
-      {loading ? <LinearProgress /> : (
-        <Grid container spacing={2}>
-          {users.length === 0 && <Grid size={{ xs: 12 }}><Alert severity="info">No users found.</Alert></Grid>}
-          {users.map((record) => (
-            <Grid key={record.id} size={{ xs: 12, md: 6 }}>
-              <RecordCard
-                title={record.fullName}
-                chips={[record.role, record.status]}
-                lines={[record.email, `Organization: ${record.organization?.name ?? record.organizationId}`]}
-              />
-              {canManage && <Button sx={{ mt: 1 }} size="small" onClick={() => setForm(record)}>Edit</Button>}
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
+        <Stack spacing={2}>
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <TextField fullWidth label="Search users" value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} />
             </Grid>
-          ))}
-        </Grid>
-      )}
+            <Grid size={{ xs: 12, md: 3 }}>
+              <TextField select fullWidth label="Organization" value={filters.organizationId} onChange={(event) => setFilters({ ...filters, organizationId: event.target.value })}>
+                <MenuItem value="">All organizations</MenuItem>
+                {organizations.map((organization) => <MenuItem key={organization.id} value={organization.id}>{organization.name}</MenuItem>)}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <TextField select fullWidth label="Role" value={filters.role} onChange={(event) => setFilters({ ...filters, role: event.target.value })}>
+                <MenuItem value="">All roles</MenuItem>
+                {roles.map((role) => <MenuItem key={role} value={role}>{role}</MenuItem>)}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <TextField select fullWidth label="Status" value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })}>
+                <MenuItem value="">All statuses</MenuItem>
+                {['ACTIVE', 'INACTIVE', 'ARCHIVED'].map((status) => <MenuItem key={status} value={status}>{status}</MenuItem>)}
+              </TextField>
+            </Grid>
+          </Grid>
+          {loading ? <LinearProgress /> : (
+            <TableContainer sx={{ overflowX: 'auto' }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Full Name</TableCell>
+                    <TableCell>Email</TableCell>
+                    <TableCell>Organization</TableCell>
+                    <TableCell>Role</TableCell>
+                    <TableCell>Status</TableCell>
+                    {canManage && <TableCell>Action</TableCell>}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredUsers.map((record) => (
+                    <TableRow key={record.id} hover>
+                      <TableCell>{record.fullName}</TableCell>
+                      <TableCell>{record.email}</TableCell>
+                      <TableCell>{record.organization?.name ?? record.organizationId}</TableCell>
+                      <TableCell>{record.role.replaceAll('_', ' ')}</TableCell>
+                      <TableCell>{record.status}</TableCell>
+                      {canManage && (
+                        <TableCell>
+                          <Button size="small" onClick={() => setForm(record)}>Edit</Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                  {filteredUsers.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={canManage ? 6 : 5}>
+                        <Alert severity="info">No users match the current filters.</Alert>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </Stack>
+      </Paper>
     </Stack>
   );
 }
@@ -870,10 +1021,15 @@ function CalendarPage() {
   const [applications, setApplications] = useState<ApplicationRecord[]>([]);
   const [entries, setEntries] = useState<CalendarEntry[]>([]);
   const [form, setForm] = useState(emptyCalendarForm);
+  const [statusFilter, setStatusFilter] = useState('');
   const [message, setMessage] = useState('');
   const canManage = Boolean(user && canManageCalendar(user.role));
 
   const currentYear = useMemo(() => String(form.plannedYear), [form.plannedYear]);
+  const filteredEntries = useMemo(
+    () => entries.filter((entry) => !statusFilter || entry.status === statusFilter),
+    [entries, statusFilter]
+  );
 
   const loadData = async () => {
     const [applicationsResponse, calendarResponse] = await Promise.all([
@@ -948,21 +1104,59 @@ function CalendarPage() {
           </Grid>
         </Paper>
       )}
-      <Grid container spacing={2}>
-        {entries.map((entry) => (
-          <Grid key={entry.id} size={{ xs: 12, md: 6 }}>
-            <RecordCard
-              title={entry.title}
-              chips={[entry.status, entry.assessmentType, String(entry.plannedYear)]}
-              lines={[
-                `Application: ${entry.application.name}`,
-                `Window: ${formatDate(entry.plannedStartDate)} to ${formatDate(entry.plannedEndDate)}`,
-                `Month: ${entry.plannedMonth ?? 'Not set'}`
-              ]}
-            />
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
+        <Stack spacing={2}>
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <TextField fullWidth label="Year" type="number" value={form.plannedYear} onChange={(event) => setForm({ ...form, plannedYear: Number(event.target.value) })} />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <TextField select fullWidth label="Status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <MenuItem value="">All statuses</MenuItem>
+                {engagementStatuses.map((value) => (
+                  <MenuItem key={value} value={value}>{value.replaceAll('_', ' ')}</MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Button variant="contained" fullWidth sx={{ height: '100%' }} onClick={loadData}>Refresh</Button>
+            </Grid>
           </Grid>
-        ))}
-      </Grid>
+          <TableContainer sx={{ overflowX: 'auto' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Title</TableCell>
+                  <TableCell>Application</TableCell>
+                  <TableCell>Assessment</TableCell>
+                  <TableCell>Year/Month</TableCell>
+                  <TableCell>Planned Window</TableCell>
+                  <TableCell>Status</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredEntries.map((entry) => (
+                  <TableRow key={entry.id} hover>
+                    <TableCell>{entry.title}</TableCell>
+                    <TableCell>{entry.application.name}</TableCell>
+                    <TableCell>{entry.assessmentType.replaceAll('_', ' ')}</TableCell>
+                    <TableCell>{entry.plannedYear} / {entry.plannedMonth ?? 'Not set'}</TableCell>
+                    <TableCell>{formatDate(entry.plannedStartDate)} to {formatDate(entry.plannedEndDate)}</TableCell>
+                    <TableCell>{entry.status.replaceAll('_', ' ')}</TableCell>
+                  </TableRow>
+                ))}
+                {filteredEntries.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6}>
+                      <Alert severity="info">No calendar entries match the current filters.</Alert>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Stack>
+      </Paper>
     </Stack>
   );
 }
@@ -1006,28 +1200,47 @@ function EngagementsPage() {
           </Grid>
         </Grid>
       </Paper>
-      <Grid container spacing={2}>
-        {engagements.map((engagement) => (
-          <Grid key={engagement.id} size={{ xs: 12, md: 6 }}>
-            <Paper variant="outlined" sx={{ p: 2.5, height: '100%' }}>
-              <Stack spacing={1.5}>
-                <Stack direction="row" justifyContent="space-between" spacing={1} alignItems="flex-start">
-                  <Typography variant="h6">{engagement.title}</Typography>
-                  <Button size="small" component={Link} to={`/engagements/${engagement.id}`}>Open</Button>
-                </Stack>
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  <Chip label={engagement.status.replaceAll('_', ' ')} size="small" />
-                  <Chip label={engagement.assessmentType.replaceAll('_', ' ')} size="small" />
-                  <Chip label={String(engagement.plannedYear)} size="small" />
-                </Stack>
-                <Typography color="text.secondary" variant="body2">Application: {engagement.application.name}</Typography>
-                <Typography color="text.secondary" variant="body2">Vendor: {engagement.vendorOrganization?.name ?? 'Not assigned'}</Typography>
-                <Typography color="text.secondary" variant="body2">Scoping records: {engagement.scopingRecords?.length ?? 0}</Typography>
-              </Stack>
-            </Paper>
-          </Grid>
-        ))}
-      </Grid>
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
+        <TableContainer sx={{ overflowX: 'auto' }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Title</TableCell>
+                <TableCell>Application</TableCell>
+                <TableCell>Vendor</TableCell>
+                <TableCell>Assessment</TableCell>
+                <TableCell>Year</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Scoping</TableCell>
+                <TableCell>Action</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {engagements.map((engagement) => (
+                <TableRow key={engagement.id} hover>
+                  <TableCell>{engagement.title}</TableCell>
+                  <TableCell>{engagement.application.name}</TableCell>
+                  <TableCell>{engagement.vendorOrganization?.name ?? 'Not assigned'}</TableCell>
+                  <TableCell>{engagement.assessmentType.replaceAll('_', ' ')}</TableCell>
+                  <TableCell>{engagement.plannedYear}</TableCell>
+                  <TableCell>{engagement.status.replaceAll('_', ' ')}</TableCell>
+                  <TableCell>{engagement.scopingRecords?.length ?? 0}</TableCell>
+                  <TableCell>
+                    <Button size="small" component={Link} to={`/engagements/${engagement.id}`}>Open</Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {engagements.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={8}>
+                    <Alert severity="info">No engagements match the current filters.</Alert>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
     </Stack>
   );
 }
