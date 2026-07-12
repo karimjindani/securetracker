@@ -87,6 +87,30 @@ enum FindingStatus {
   CLOSED
 }
 
+enum EvidenceType {
+  SCREENSHOT
+  JIRA_REFERENCE
+  GIT_COMMIT
+  CONFIG_CHANGE
+  DEPLOYMENT_EVIDENCE
+  TEST_RESULT
+  DOCUMENT
+  OTHER
+}
+
+enum RevalidationResult {
+  PASSED
+  FAILED
+}
+
+enum RiskAcceptanceStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
 model Organization {
   id               String           @id @default(uuid()) @db.Uuid
   name             String           @unique @db.VarChar(150)
@@ -114,7 +138,14 @@ model User {
   createdEngagements  VaptEngagement[] @relation("EngagementCreator")
   createdReports      Report[] @relation("ReportCreator")
   uploadedReportVersions ReportVersion[] @relation("ReportVersionUploader")
+  createdFindings     Finding[] @relation("FindingCreator")
+  closedFindings      Finding[] @relation("FindingCloser")
   assignedFindings    Finding[] @relation("FindingAssignee")
+  changedFindingStatuses FindingStatusHistory[] @relation("FindingStatusChanger")
+  uploadedFindingEvidence FindingEvidence[] @relation("FindingEvidenceUploader")
+  performedRevalidations Revalidation[] @relation("RevalidationPerformer")
+  requestedRiskAcceptances RiskAcceptance[] @relation("RiskAcceptanceRequester")
+  reviewedRiskAcceptances RiskAcceptance[] @relation("RiskAcceptanceReviewer")
   auditLogs           AuditLog[]
 }
 
@@ -165,6 +196,8 @@ model VaptEngagement {
   scopingRecords        ScopingRecord[]
   reports               Report[]
   findings              Finding[]
+  revalidations          Revalidation[]
+  riskAcceptances        RiskAcceptance[]
 
   @@index([applicationId])
   @@index([plannedYear, plannedMonth])
@@ -228,6 +261,8 @@ model ReportVersion {
   uploadNotes         String?
   report              Report      @relation(fields: [reportId], references: [id])
   uploadedBy          User        @relation("ReportVersionUploader", fields: [uploadedById], references: [id])
+  sourceFindings      Finding[]   @relation("FindingSourceReportVersion")
+  revalidations       Revalidation[]
 
   @@unique([reportId, versionNumber])
 }
@@ -255,13 +290,104 @@ model Finding {
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
   engagement            VaptEngagement  @relation(fields: [engagementId], references: [id])
+  sourceReportVersion   ReportVersion?   @relation("FindingSourceReportVersion", fields: [sourceReportVersionId], references: [id])
   assignedTo            User?           @relation("FindingAssignee", fields: [assignedToUserId], references: [id])
+  createdBy             User            @relation("FindingCreator", fields: [createdById], references: [id])
+  closedBy              User?           @relation("FindingCloser", fields: [closedById], references: [id])
+  statusHistory         FindingStatusHistory[]
+  evidence              FindingEvidence[]
+  revalidations         Revalidation[]
+  riskAcceptances       RiskAcceptance[]
 
   @@index([engagementId])
   @@index([status])
   @@index([severity])
   @@index([assignedToUserId])
   @@index([dueDate])
+}
+
+model FindingStatusHistory {
+  id          String        @id @default(uuid()) @db.Uuid
+  findingId   String        @db.Uuid
+  oldStatus   FindingStatus?
+  newStatus   FindingStatus
+  changedById String        @db.Uuid
+  comments    String?
+  changedAt   DateTime      @default(now())
+  finding     Finding       @relation(fields: [findingId], references: [id])
+  changedBy   User          @relation("FindingStatusChanger", fields: [changedById], references: [id])
+
+  @@index([findingId])
+  @@index([newStatus])
+}
+
+model FindingEvidence {
+  id                 String       @id @default(uuid()) @db.Uuid
+  findingId          String       @db.Uuid
+  evidenceType       EvidenceType
+  title              String       @db.VarChar(250)
+  notes              String?
+  fileObjectKey      String?
+  fileName           String?      @db.VarChar(255)
+  fileMimeType       String?      @db.VarChar(100)
+  fileSizeBytes      BigInt?
+  jiraReference      String?      @db.VarChar(150)
+  gitCommitReference String?      @db.VarChar(150)
+  uploadedById       String       @db.Uuid
+  uploadedAt         DateTime     @default(now())
+  finding            Finding      @relation(fields: [findingId], references: [id])
+  uploadedBy         User         @relation("FindingEvidenceUploader", fields: [uploadedById], references: [id])
+
+  @@index([findingId])
+  @@index([uploadedById])
+}
+
+model Revalidation {
+  id              String             @id @default(uuid()) @db.Uuid
+  findingId       String             @db.Uuid
+  engagementId    String             @db.Uuid
+  revalidationDate DateTime
+  result          RevalidationResult
+  remarks         String?
+  performedById   String             @db.Uuid
+  reportVersionId String?            @db.Uuid
+  createdAt       DateTime           @default(now())
+  finding         Finding            @relation(fields: [findingId], references: [id])
+  engagement      VaptEngagement     @relation(fields: [engagementId], references: [id])
+  performedBy     User               @relation("RevalidationPerformer", fields: [performedById], references: [id])
+  reportVersion   ReportVersion?     @relation(fields: [reportVersionId], references: [id])
+
+  @@index([findingId])
+  @@index([engagementId])
+  @@index([result])
+}
+
+model RiskAcceptance {
+  id                    String               @id @default(uuid()) @db.Uuid
+  findingId             String               @db.Uuid
+  engagementId          String               @db.Uuid
+  riskDescription       String
+  businessJustification String
+  mitigatingControls    String?
+  expiryDate            DateTime
+  status                RiskAcceptanceStatus @default(REQUESTED)
+  requestNotes          String?
+  reviewNotes           String?
+  requestedById         String               @db.Uuid
+  reviewedById          String?              @db.Uuid
+  requestedAt           DateTime             @default(now())
+  reviewedAt            DateTime?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  finding               Finding              @relation(fields: [findingId], references: [id])
+  engagement             VaptEngagement       @relation(fields: [engagementId], references: [id])
+  requestedBy           User                 @relation("RiskAcceptanceRequester", fields: [requestedById], references: [id])
+  reviewedBy            User?                @relation("RiskAcceptanceReviewer", fields: [reviewedById], references: [id])
+
+  @@index([findingId])
+  @@index([engagementId])
+  @@index([status])
+  @@index([expiryDate])
 }
 
 model AuditLog {

@@ -50,21 +50,37 @@ export async function cleanupRegressionData(prisma = new PrismaClient()): Promis
   const applicationIds = regressionApplications.map((application) => application.id);
   const userIds = regressionUsers.map((user) => user.id);
   const organizationIds = regressionOrganizations.map((organization) => organization.id);
+  const regressionRiskAcceptances = await prisma.riskAcceptance.findMany({
+    where: { engagementId: { in: engagementIds } },
+    select: { id: true }
+  });
+  const riskAcceptanceIds = regressionRiskAcceptances.map((riskAcceptance) => riskAcceptance.id);
 
   const reportVersions = await prisma.reportVersion.findMany({
     where: { report: { engagementId: { in: engagementIds } } },
     select: { objectStorageKey: true }
   });
+  const findingEvidence = await prisma.findingEvidence.findMany({
+    where: { finding: { engagementId: { in: engagementIds } }, fileObjectKey: { not: null } },
+    select: { fileObjectKey: true }
+  });
   const reportObjects = await removeReportObjects(reportVersions.map((version) => version.objectStorageKey));
+  const evidenceObjects = await removeReportObjects(
+    findingEvidence.map((evidence) => evidence.fileObjectKey).filter((key): key is string => Boolean(key))
+  );
 
   const auditLogs = await prisma.auditLog.deleteMany({
     where: {
       OR: [
-        { entityId: { in: [...engagementIds, ...applicationIds, ...userIds, ...organizationIds] } },
+        { entityId: { in: [...engagementIds, ...applicationIds, ...userIds, ...organizationIds, ...riskAcceptanceIds] } },
         { action: { startsWith: 'REGRESSION_' } }
       ]
     }
   });
+  await prisma.revalidation.deleteMany({ where: { engagementId: { in: engagementIds } } });
+  await prisma.riskAcceptance.deleteMany({ where: { id: { in: riskAcceptanceIds } } });
+  await prisma.findingEvidence.deleteMany({ where: { finding: { engagementId: { in: engagementIds } } } });
+  await prisma.findingStatusHistory.deleteMany({ where: { finding: { engagementId: { in: engagementIds } } } });
   await prisma.finding.deleteMany({ where: { engagementId: { in: engagementIds } } });
   await prisma.reportVersion.deleteMany({
     where: { report: { engagementId: { in: engagementIds } } }
@@ -87,7 +103,7 @@ export async function cleanupRegressionData(prisma = new PrismaClient()): Promis
     auditLogs: auditLogs.count,
     users: users.count,
     organizations: organizations.count,
-    reportObjects
+    reportObjects: reportObjects + evidenceObjects
   };
 }
 
@@ -112,6 +128,10 @@ export async function resetToSeededData(prisma = new PrismaClient()): Promise<Re
   const cleanup = await cleanupRegressionData(prisma);
 
   await prisma.auditLog.deleteMany();
+  await prisma.revalidation.deleteMany();
+  await prisma.riskAcceptance.deleteMany();
+  await prisma.findingEvidence.deleteMany();
+  await prisma.findingStatusHistory.deleteMany();
   await prisma.finding.deleteMany();
   await prisma.reportVersion.deleteMany();
   await prisma.report.deleteMany();

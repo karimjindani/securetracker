@@ -32,14 +32,22 @@ npm.cmd run ops
 - Protected PDF uploads set the protected flag without submitting passwords.
 - Report download returns the original uploaded PDF bytes.
 - Auditor cannot upload reports.
+- Vendor creates findings from draft-report-backed engagements.
+- Paysys assigns findings to developers.
+- Developer uploads evidence and marks findings fixed pending revalidation.
+- Vendor records failed and passed revalidation.
+- System Admin sees populated Organizations and Users data.
+- Paysys requests risk acceptance, NBP approves/rejects, and approved risks update findings.
+- Dashboard metrics include accepted risks and finding counts.
+- Auditor searches audit logs and exports CSV.
 
 ## Future Coverage Placeholders
 
-Pending specs remain for findings, revalidation, risk acceptance, dashboards, audit search, and notifications.
+Pending specs remain for notifications, reference data administration, and system configuration.
 
 ## Data Safety
 
-Regression-generated records must use the `REGRESSION_` prefix. Cleanup deletes only regression-prefixed applications, engagements, scoping records, report metadata, report versions, users, organizations, and related audit records. Reset removes business workflow data and restores seeded organizations, demo users, applications, engagements, and scoping records.
+Regression-generated records must use the `REGRESSION_` prefix. Cleanup deletes only regression-prefixed applications, engagements, scoping records, report metadata, report versions, users, organizations, risk acceptance records, and related audit records. Reset removes business workflow data and restores seeded organizations, demo users, applications, engagements, and scoping records.
 
 The external Ops Console at `http://127.0.0.1:3300` provides buttons for running regression, cleanup, and reset. It streams real command logs so startup and dependency failures are visible.
 

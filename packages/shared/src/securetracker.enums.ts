@@ -50,6 +50,27 @@ export const findingStatuses = [
 
 export type FindingStatus = typeof findingStatuses[number];
 
+export const findingSeverities = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFORMATIONAL'] as const;
+export type FindingSeverity = typeof findingSeverities[number];
+
+export const evidenceTypes = [
+  'SCREENSHOT',
+  'JIRA_REFERENCE',
+  'GIT_COMMIT',
+  'CONFIG_CHANGE',
+  'DEPLOYMENT_EVIDENCE',
+  'TEST_RESULT',
+  'DOCUMENT',
+  'OTHER'
+] as const;
+export type EvidenceType = typeof evidenceTypes[number];
+
+export const revalidationResults = ['PASSED', 'FAILED'] as const;
+export type RevalidationResult = typeof revalidationResults[number];
+
+export const riskAcceptanceStatuses = ['REQUESTED', 'APPROVED', 'REJECTED', 'EXPIRED', 'CANCELLED'] as const;
+export type RiskAcceptanceStatus = typeof riskAcceptanceStatuses[number];
+
 export const assessmentTypes = ['WHITEBOX', 'BLACK_GREY'] as const;
 export type AssessmentType = typeof assessmentTypes[number];
 
@@ -89,6 +110,21 @@ export const canManageScoping = (role: Role): boolean =>
 export const canUploadReports = (role: Role): boolean =>
   role === 'SYSTEM_ADMIN' || role === 'PAYSYS_SECURITY_ADMIN' || role === 'VENDOR_ADMIN';
 
+export const canCreateFindings = (role: Role): boolean =>
+  role === 'SYSTEM_ADMIN' || role === 'PAYSYS_SECURITY_ADMIN' || role === 'VENDOR_ADMIN';
+
+export const canAssignFindings = (role: Role): boolean => role === 'SYSTEM_ADMIN' || role === 'PAYSYS_SECURITY_ADMIN';
+
+export const canRevalidateFindings = (role: Role): boolean => role === 'SYSTEM_ADMIN' || role === 'VENDOR_ADMIN';
+
+export const canRequestRiskAcceptance = (role: Role): boolean =>
+  role === 'SYSTEM_ADMIN' || role === 'PAYSYS_SECURITY_ADMIN';
+
+export const canReviewRiskAcceptance = (role: Role): boolean => role === 'NBP_SECURITY_ADMIN';
+
+export const canViewAudit = (role: Role): boolean =>
+  role === 'SYSTEM_ADMIN' || role === 'AUDITOR' || role === 'NBP_SECURITY_ADMIN' || role === 'PAYSYS_SECURITY_ADMIN';
+
 export const isReadOnlyRole = (role: Role): boolean => role === 'NBP_VIEWER' || role === 'AUDITOR';
 
 export const canManageOrganizations = (role: Role): boolean => role === 'SYSTEM_ADMIN';
@@ -96,13 +132,13 @@ export const canManageOrganizations = (role: Role): boolean => role === 'SYSTEM_
 export const canManageUsers = (role: Role): boolean => role === 'SYSTEM_ADMIN';
 
 export const navigationByRole: Record<Role, string[]> = {
-  SYSTEM_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'users'],
-  NBP_SECURITY_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'users'],
+  SYSTEM_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'users', 'audit'],
+  NBP_SECURITY_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'audit'],
   NBP_VIEWER: ['dashboard', 'applications', 'calendar', 'engagements'],
-  PAYSYS_SECURITY_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'users'],
+  PAYSYS_SECURITY_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'audit'],
   PAYSYS_DEVELOPER: ['dashboard', 'applications', 'calendar', 'engagements'],
   VENDOR_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements'],
-  AUDITOR: ['dashboard', 'applications', 'calendar', 'engagements']
+  AUDITOR: ['dashboard', 'applications', 'calendar', 'engagements', 'audit']
 };
 
 export const isRole = (value: string): value is Role => roles.includes(value as Role);

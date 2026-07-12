@@ -461,6 +461,8 @@ CREATE INDEX idx_findings_due_date ON findings(due_date);
 
 Stores status changes for each finding.
 
+v0.6.0 implementation note: finding status history, evidence, and revalidation attempts are stored as first-class tables and linked to the existing `findings` table.
+
 | Column | Type | Required | Description |
 |---|---|---:|---|
 | id | UUID | Yes | Primary key |
@@ -1005,3 +1007,9 @@ The database design is successful when:
 - Every risk acceptance has approvals and expiry
 - Every important action is auditable
 - No sensitive passwords or secrets are stored
+
+---
+
+# v0.11.3 Implementation Note
+
+The implemented database model now includes `risk_acceptances` through the Prisma `RiskAcceptance` model. Records link to `findings`, `vapt_engagements`, requester, and reviewer users, and use `RiskAcceptanceStatus` values `REQUESTED`, `APPROVED`, `REJECTED`, `EXPIRED`, and `CANCELLED`. Regression cleanup deletes risk acceptance records before linked findings and engagements.

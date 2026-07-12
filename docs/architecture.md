@@ -671,6 +671,8 @@ stateDiagram-v2
     Closed --> [*]
 ```
 
+v0.6.0 implemented manual finding creation, Paysys assignment, assigned developer evidence upload, `FIXED_PENDING_REVALIDATION`, and Apprise pass/fail revalidation. Automated report parsing remained later work; risk acceptance is implemented in `v0.11.3`.
+
 ---
 
 # 10. Audit Architecture
@@ -1049,3 +1051,9 @@ The architecture is successful if:
 - Every critical action has an audit trail
 - Dashboards replace manual Excel reporting
 - The system can support future AI-assisted report ingestion
+
+---
+
+# v0.11.3 Implementation Note
+
+The current implemented architecture includes API-backed Organizations and Users portal pages, a Risk Acceptance module, a Dashboard module, and an Audit Search/Export module. Risk acceptance is linked to findings and engagements, reviewed by NBP Security Admin, and updates approved findings to `RISK_ACCEPTED`. Dashboard metrics are computed live from PostgreSQL. Audit export produces CSV from filtered audit log records and records an `AUDIT_EXPORTED` event.

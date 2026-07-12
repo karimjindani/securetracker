@@ -1001,7 +1001,7 @@ Epic 11 – Revalidation Workflow
 Epic 14 – Dashboards & Reporting
 Epic 15 – Audit Trail
 
-# v0.5.0 Implementation Status
+# v0.6.0 Implementation Status
 
 Implemented:
 
@@ -1009,14 +1009,33 @@ Implemented:
 - Epic 6 scoping record creation and finalization.
 - Epic 7 report repository with PDF upload, version metadata, MinIO storage, view, and download.
 - Epic 8 password protected PDF viewer with browser-only password entry.
+- Epic 9 findings management with manual finding creation, update, assignment, status tracking, and viewing.
+- Core Epic 10 remediation evidence upload for assigned developer fixes.
+- Epic 11 revalidation workflow with Apprise pass/fail results.
 - Paysys-Apprise initiation meeting capture with optional Bank/NBP attendance.
 - NBP-only engagement closure enforcement.
 - Paysys Go-Live transition from closed engagements.
 - Seeded workflow records and generated report files for regression testing.
 
-Not implemented in v0.5.0:
+Not implemented in v0.6.0:
 
-- Findings, revalidation, risk acceptance, dashboards, and notifications.
+- Risk acceptance, dashboards, notifications, and audit search/export.
+
+---
+
+# v0.11.3 Implementation Status
+
+Implemented:
+
+- Organizations and Users frontend pages with System Admin management controls.
+- Epic 12 risk acceptance request and NBP approve/reject workflow.
+- Core Epic 14 dashboard metrics, application heatmap, annual calendar visibility, and vendor performance summary.
+- Epic 15 audit search and CSV export.
+
+Not implemented in v0.11.3:
+
+- Epic 13 notifications.
+- Epic 16 reference data and system configuration administration.
 
 ---
 

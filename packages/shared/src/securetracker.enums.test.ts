@@ -6,9 +6,16 @@ import {
   canManageScoping,
   canCloseEngagement,
   canManageOrganizations,
+  canManageUsers,
   canMoveToGoLive,
+  canRequestRiskAcceptance,
+  canReviewRiskAcceptance,
+  canViewAudit,
+  evidenceTypes,
   engagementStatuses,
-  navigationByRole
+  findingStatuses,
+  navigationByRole,
+  riskAcceptanceStatuses
 } from './securetracker.enums.js';
 
 describe('securetracker shared enums', () => {
@@ -37,6 +44,21 @@ describe('securetracker shared enums', () => {
     expect(canManageEngagements('NBP_SECURITY_ADMIN')).toBe(true);
     expect(canManageScoping('PAYSYS_SECURITY_ADMIN')).toBe(true);
     expect(canManageScoping('NBP_SECURITY_ADMIN')).toBe(false);
-    expect(navigationByRole.AUDITOR).toEqual(['dashboard', 'applications', 'calendar', 'engagements']);
+    expect(canManageUsers('SYSTEM_ADMIN')).toBe(true);
+    expect(navigationByRole.AUDITOR).toEqual(['dashboard', 'applications', 'calendar', 'engagements', 'audit']);
+    expect(navigationByRole.PAYSYS_SECURITY_ADMIN).not.toContain('users');
+  });
+
+  it('exposes finding and evidence lifecycle constants', () => {
+    expect(findingStatuses).toContain('FIXED_PENDING_REVALIDATION');
+    expect(evidenceTypes).toContain('DEPLOYMENT_EVIDENCE');
+  });
+
+  it('exposes risk acceptance and audit role helpers', () => {
+    expect(riskAcceptanceStatuses).toEqual(['REQUESTED', 'APPROVED', 'REJECTED', 'EXPIRED', 'CANCELLED']);
+    expect(canRequestRiskAcceptance('PAYSYS_SECURITY_ADMIN')).toBe(true);
+    expect(canReviewRiskAcceptance('NBP_SECURITY_ADMIN')).toBe(true);
+    expect(canReviewRiskAcceptance('PAYSYS_SECURITY_ADMIN')).toBe(false);
+    expect(canViewAudit('AUDITOR')).toBe(true);
   });
 });

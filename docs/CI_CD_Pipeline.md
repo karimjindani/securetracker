@@ -29,6 +29,10 @@ Starting in `v0.4.0`, regression also covers engagement initiation, scoping fina
 
 Starting in `v0.5.0`, regression also covers report upload/download, protected PDF detection, report upload RBAC, and report cleanup/reset behavior.
 
+Starting in `v0.6.0`, regression also covers finding creation, assignment, evidence upload, failed revalidation, refix, and passed revalidation.
+
+Starting in `v0.11.3`, regression also covers Organizations/Users data visibility, risk acceptance approval/rejection, dashboard metrics, audit search, and audit CSV export.
+
 ## Security Scanning
 
 Security scanning is targeted for a later hardening baseline:

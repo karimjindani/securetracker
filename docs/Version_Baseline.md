@@ -158,3 +158,59 @@ Code reference:
 
 - Branch: `feat/v0.3.1-regression-ops`
 - Version: `0.5.0`
+
+## v0.6.0 - Findings, Evidence, and Revalidation
+
+Status: Implemented on main
+
+Baseline contents:
+
+- Findings APIs for engagement finding list, create, detail, update, assignment, status transitions, evidence, and revalidation.
+- Finding status history, remediation evidence, and revalidation attempt records.
+- MinIO-backed evidence file storage.
+- Engagement detail UI for findings, assignment, developer evidence, and vendor revalidation.
+- Workflow enforcement for Vendor Admin, Paysys Security Admin, and Paysys Developer.
+- Regression coverage for create, assign, evidence upload, failed revalidation, refix, and passed revalidation.
+
+Documentation references:
+
+- `docs/plans/v0.6.0-findings-revalidation-plan.md`
+- `docs/testing/v0.6.0-test-results.md`
+- `docs/user-guides/v0.6.0-findings-revalidation-user-guide.md`
+- `docs/testing/regression-suite.md`
+
+Code reference:
+
+- Branch: `main`
+- Version: `0.6.0`
+
+## v0.11.3 - Admin Pages, Risk Acceptance, Dashboards, and Audit Search
+
+Status: Implemented on main
+
+Version allocation:
+
+- `AGENTS.md` required remote version inspection before assigning the code version.
+- `origin/main` was fetched with prune, active remote branches were inspected, and the highest remote version found was `v0.11.2`.
+- This slice therefore uses `v0.11.3`.
+
+Baseline contents:
+
+- API-backed Organizations and Users frontend pages with System Admin create/update controls.
+- Users navigation restricted to `SYSTEM_ADMIN`; audit navigation added for governance/auditor roles.
+- Risk acceptance request and NBP approve/reject workflow linked to findings.
+- Live dashboard metrics for engagements, findings, accepted risks, expiring risks, revalidation, heatmap, upcoming engagements, and vendor performance.
+- Audit search and CSV export.
+- Regression cleanup/reset support for risk acceptance records.
+
+Documentation references:
+
+- `docs/plans/v0.11.3-admin-risk-dashboard-audit-plan.md`
+- `docs/testing/v0.11.3-test-results.md`
+- `docs/user-guides/v0.11.3-admin-risk-dashboard-audit-user-guide.md`
+- `docs/testing/regression-suite.md`
+
+Code reference:
+
+- Branch: `main`
+- Version: `0.11.3`

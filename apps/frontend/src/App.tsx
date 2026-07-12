@@ -1,5 +1,7 @@
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import AppsIcon from '@mui/icons-material/Apps';
+import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
+import BugReportIcon from '@mui/icons-material/BugReport';
 import BusinessIcon from '@mui/icons-material/Business';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -46,18 +48,36 @@ import {
   applicationCriticalities,
   applicationEnvironments,
   assessmentTypes,
+  canAssignFindings,
+  canCreateFindings,
+  canManageOrganizations,
+  canManageUsers,
+  canRequestRiskAcceptance,
+  canReviewRiskAcceptance,
+  canRevalidateFindings,
   canUploadReports,
   canManageApplications,
   canManageCalendar,
   canManageScoping,
   engagementStatuses,
+  evidenceTypes,
+  findingSeverities,
+  findingStatuses,
   navigationByRole,
+  organizationTypes,
   reportTypes,
+  roles,
   type ApplicationCriticality,
   type ApplicationEnvironment,
   type AssessmentType,
+  type EvidenceType,
   type EngagementStatus,
+  type FindingSeverity,
+  type FindingStatus,
+  type OrganizationType,
   type ReportType,
+  type RevalidationResult,
+  type RiskAcceptanceStatus,
   type Role
 } from '@securetracker/shared';
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist';
@@ -68,6 +88,8 @@ import { AuthProvider, useAuth } from './auth/AuthProvider.js';
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).toString();
 
+type RecordStatus = 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
+
 interface ApplicationRecord {
   id: string;
   name: string;
@@ -77,6 +99,51 @@ interface ApplicationRecord {
   criticality: ApplicationCriticality;
   internetFacing: boolean;
   status: string;
+}
+
+interface OrganizationRecord {
+  id: string;
+  name: string;
+  organizationType: OrganizationType;
+  status: RecordStatus;
+}
+
+interface UserRecord {
+  id: string;
+  organizationId: string;
+  keycloakUserId: string;
+  fullName: string;
+  email: string;
+  role: Role;
+  status: RecordStatus;
+  organization?: OrganizationRecord;
+}
+
+interface DashboardSummary {
+  metrics: Record<string, number>;
+  heatmap: Array<Record<string, number | string>>;
+  upcomingEngagements: Array<{
+    id: string;
+    title: string;
+    plannedStartDate?: string;
+    plannedMonth?: string;
+    plannedYear: number;
+    applicationName: string;
+    vendorName?: string;
+  }>;
+  vendorPerformance: Array<{ vendorName: string; reports: number; passed: number; failed: number }>;
+}
+
+interface AuditLogRecord {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId?: string;
+  oldValue?: unknown;
+  newValue?: unknown;
+  ipAddress?: string;
+  createdAt: string;
+  user?: { fullName: string; email: string };
 }
 
 interface CalendarEntry {
@@ -139,6 +206,68 @@ interface ReportRecord {
   versions: ReportVersionRecord[];
 }
 
+interface UserOption {
+  id: string;
+  fullName: string;
+  email: string;
+}
+
+interface FindingEvidenceRecord {
+  id: string;
+  evidenceType: EvidenceType;
+  title: string;
+  notes?: string;
+  fileName?: string;
+  fileSizeBytes?: string;
+  jiraReference?: string;
+  gitCommitReference?: string;
+  uploadedAt: string;
+  uploadedBy?: { fullName: string; email: string };
+}
+
+interface RevalidationRecord {
+  id: string;
+  result: RevalidationResult;
+  revalidationDate: string;
+  remarks?: string;
+  createdAt: string;
+  performedBy?: { fullName: string; email: string };
+}
+
+interface FindingRecord {
+  id: string;
+  findingReference: string;
+  title: string;
+  description: string;
+  impact?: string;
+  recommendation?: string;
+  severity: FindingSeverity;
+  cvssScore?: string | null;
+  cwe?: string;
+  owaspCategory?: string;
+  status: FindingStatus;
+  assignedToUserId?: string;
+  dueDate?: string;
+  assignedTo?: UserOption;
+  evidence: FindingEvidenceRecord[];
+  revalidations: RevalidationRecord[];
+  riskAcceptances?: RiskAcceptanceRecord[];
+}
+
+interface RiskAcceptanceRecord {
+  id: string;
+  riskDescription: string;
+  businessJustification: string;
+  mitigatingControls?: string;
+  expiryDate: string;
+  status: RiskAcceptanceStatus;
+  requestNotes?: string;
+  reviewNotes?: string;
+  requestedAt: string;
+  requestedBy?: { fullName: string; email: string };
+  reviewedBy?: { fullName: string; email: string };
+}
+
 const emptyApplicationForm = {
   name: '',
   description: '',
@@ -149,6 +278,23 @@ const emptyApplicationForm = {
   criticality: 'HIGH' as ApplicationCriticality,
   technologyStack: '',
   internetFacing: false
+};
+
+const emptyOrganizationForm = {
+  id: '',
+  name: '',
+  organizationType: 'PAYSYS' as OrganizationType,
+  status: 'ACTIVE' as RecordStatus
+};
+
+const emptyUserForm = {
+  id: '',
+  organizationId: '',
+  keycloakUserId: '',
+  fullName: '',
+  email: '',
+  role: 'PAYSYS_DEVELOPER' as Role,
+  status: 'ACTIVE' as RecordStatus
 };
 
 const emptyCalendarForm = {
@@ -181,6 +327,44 @@ const emptyReportForm = {
   uploadNotes: ''
 };
 
+const emptyFindingForm = {
+  findingReference: '',
+  title: '',
+  description: '',
+  impact: '',
+  recommendation: '',
+  severity: 'HIGH' as FindingSeverity,
+  cvssScore: '',
+  cwe: '',
+  owaspCategory: '',
+  dueDate: ''
+};
+
+const emptyEvidenceForm = {
+  findingId: '',
+  evidenceType: 'DOCUMENT' as EvidenceType,
+  title: '',
+  notes: '',
+  jiraReference: '',
+  gitCommitReference: ''
+};
+
+const emptyRevalidationForm = {
+  findingId: '',
+  result: 'PASSED' as RevalidationResult,
+  revalidationDate: new Date().toISOString().slice(0, 10),
+  remarks: ''
+};
+
+const emptyRiskAcceptanceForm = {
+  findingId: '',
+  riskDescription: '',
+  businessJustification: '',
+  mitigatingControls: '',
+  expiryDate: '',
+  requestNotes: ''
+};
+
 const theme = createTheme({
   palette: {
     mode: 'light',
@@ -202,7 +386,8 @@ const navigation = [
   { id: 'calendar', label: 'VAPT Calendar', path: '/calendar', icon: <CalendarMonthIcon /> },
   { id: 'engagements', label: 'Engagements', path: '/engagements', icon: <TrackChangesIcon /> },
   { id: 'organizations', label: 'Organizations', path: '/organizations', icon: <BusinessIcon /> },
-  { id: 'users', label: 'Users', path: '/users', icon: <PeopleIcon /> }
+  { id: 'users', label: 'Users', path: '/users', icon: <PeopleIcon /> },
+  { id: 'audit', label: 'Audit', path: '/audit', icon: <AdminPanelSettingsIcon /> }
 ];
 
 export function App() {
@@ -279,13 +464,14 @@ function ProtectedShell() {
         <Container maxWidth="lg" sx={{ py: 4 }}>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard role={auth.user.role} />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/applications" element={<GuardedPage required="applications" element={<ApplicationsPage />} />} />
             <Route path="/calendar" element={<GuardedPage required="calendar" element={<CalendarPage />} />} />
             <Route path="/engagements" element={<GuardedPage required="engagements" element={<EngagementsPage />} />} />
             <Route path="/engagements/:id" element={<GuardedPage required="engagements" element={<EngagementDetailPage />} />} />
-            <Route path="/organizations" element={<RestrictedPage required="organizations" title="Organizations" />} />
-            <Route path="/users" element={<RestrictedPage required="users" title="Users" />} />
+            <Route path="/organizations" element={<GuardedPage required="organizations" element={<OrganizationsPage />} />} />
+            <Route path="/users" element={<GuardedPage required="users" element={<UsersPage />} />} />
+            <Route path="/audit" element={<GuardedPage required="audit" element={<AuditPage />} />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Container>
@@ -294,21 +480,110 @@ function ProtectedShell() {
   );
 }
 
-function Dashboard({ role }: { role: Role }) {
+function Dashboard() {
+  const { apiFetch, user } = useAuth();
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    const load = async () => {
+      const response = await apiFetch(`${apiBaseUrl}/dashboard/summary`);
+      if (response.ok) {
+        setSummary(await response.json());
+        setMessage('');
+      } else {
+        setMessage('Dashboard metrics could not be loaded.');
+      }
+    };
+    void load();
+  }, []);
+
+  const metrics = summary?.metrics ?? {};
   return (
     <Stack spacing={3}>
       <Box>
         <Typography variant="h5">Security Dashboard</Typography>
-        <Typography color="text.secondary">Application inventory, VAPT calendar, engagements, and report repository baseline for v0.5.0.</Typography>
+        <Typography color="text.secondary">Live governance, findings, risk acceptance, and audit visibility for v0.11.3.</Typography>
       </Box>
-      <Paper variant="outlined" sx={{ p: 2.5 }}>
-        <Typography variant="h6" gutterBottom>
-          Active Access Profile
-        </Typography>
-        <Typography color="text.secondary">
-          Navigation is filtered for {role.replaceAll('_', ' ')}. API guards remain the source of truth.
-        </Typography>
-      </Paper>
+      {message && <Alert severity="error">{message}</Alert>}
+      {!summary ? (
+        <LinearProgress />
+      ) : (
+        <>
+          <Grid container spacing={2}>
+            {[
+              ['Total engagements', metrics.totalEngagements],
+              ['Planned', metrics.plannedEngagements],
+              ['In progress', metrics.inProgressEngagements],
+              ['Closed/Go-Live', metrics.closedEngagements],
+              ['Critical open', metrics.criticalOpenFindings],
+              ['High open', metrics.highOpenFindings],
+              ['Overdue findings', metrics.overdueFindings],
+              ['Accepted risks', metrics.acceptedRisks],
+              ['Expiring risks', metrics.expiringRisks],
+              ['Revalidation success', `${metrics.revalidationSuccessRate ?? 0}%`]
+            ].map(([label, value]) => (
+              <Grid key={label} size={{ xs: 6, md: 3 }}>
+                <Paper variant="outlined" sx={{ p: 2, height: '100%' }}>
+                  <Typography variant="caption" color="text.secondary">{label}</Typography>
+                  <Typography variant="h5">{value}</Typography>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Paper variant="outlined" sx={{ p: 2.5, height: '100%' }}>
+                <Typography variant="h6" gutterBottom>Application Heatmap</Typography>
+                <Stack spacing={1}>
+                  {summary.heatmap.length === 0 && <Typography color="text.secondary">No open findings yet.</Typography>}
+                  {summary.heatmap.map((row) => (
+                    <Box key={String(row.applicationName)}>
+                      <Typography fontWeight={700}>{String(row.applicationName)}</Typography>
+                      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                        {['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFORMATIONAL'].map((severity) => (
+                          <Chip key={severity} size="small" label={`${severity}: ${row[severity] ?? 0}`} />
+                        ))}
+                      </Stack>
+                    </Box>
+                  ))}
+                </Stack>
+              </Paper>
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Paper variant="outlined" sx={{ p: 2.5, height: '100%' }}>
+                <Typography variant="h6" gutterBottom>Upcoming Engagements</Typography>
+                <Stack spacing={1}>
+                  {summary.upcomingEngagements.length === 0 && <Typography color="text.secondary">No upcoming planned engagements.</Typography>}
+                  {summary.upcomingEngagements.map((engagement) => (
+                    <RecordCard
+                      key={engagement.id}
+                      title={engagement.title}
+                      chips={[engagement.plannedMonth || 'Scheduled', String(engagement.plannedYear)]}
+                      lines={[`Application: ${engagement.applicationName}`, `Vendor: ${engagement.vendorName ?? 'Not assigned'}`]}
+                    />
+                  ))}
+                </Stack>
+              </Paper>
+            </Grid>
+          </Grid>
+          <Paper variant="outlined" sx={{ p: 2.5 }}>
+            <Typography variant="h6" gutterBottom>Vendor Performance</Typography>
+            <Grid container spacing={2}>
+              {summary.vendorPerformance.length === 0 && <Grid size={{ xs: 12 }}><Typography color="text.secondary">No vendor metrics yet.</Typography></Grid>}
+              {summary.vendorPerformance.map((vendor) => (
+                <Grid key={vendor.vendorName} size={{ xs: 12, md: 4 }}>
+                  <RecordCard
+                    title={vendor.vendorName}
+                    chips={[`Reports ${vendor.reports}`, `Passed ${vendor.passed}`, `Failed ${vendor.failed}`]}
+                    lines={[`Visible to ${user?.role.replaceAll('_', ' ')}`]}
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          </Paper>
+        </>
+      )}
     </Stack>
   );
 }
@@ -401,6 +676,191 @@ function ApplicationsPage() {
           </Grid>
         ))}
       </Grid>
+    </Stack>
+  );
+}
+
+function OrganizationsPage() {
+  const { user, apiFetch } = useAuth();
+  const [organizations, setOrganizations] = useState<OrganizationRecord[]>([]);
+  const [form, setForm] = useState(emptyOrganizationForm);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState('');
+  const canManage = Boolean(user && canManageOrganizations(user.role));
+
+  const loadOrganizations = async () => {
+    setLoading(true);
+    const response = await apiFetch(`${apiBaseUrl}/organizations`);
+    if (response.ok) {
+      setOrganizations(await response.json());
+      setMessage('');
+    } else {
+      setMessage('Organizations could not be loaded.');
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    void loadOrganizations();
+  }, []);
+
+  const save = async () => {
+    const url = form.id ? `${apiBaseUrl}/organizations/${form.id}` : `${apiBaseUrl}/organizations`;
+    const response = await apiFetch(url, {
+      method: form.id ? 'PATCH' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: form.name, organizationType: form.organizationType, status: form.status })
+    });
+    setMessage(response.ok ? 'Organization saved.' : 'Organization could not be saved.');
+    if (response.ok) {
+      setForm(emptyOrganizationForm);
+      await loadOrganizations();
+    }
+  };
+
+  return (
+    <Stack spacing={3}>
+      <PageTitle title="Organizations" subtitle="NBP, Paysys, Apprise, and auditor organization records." />
+      {message && <Alert severity={message.includes('could not') ? 'error' : 'success'}>{message}</Alert>}
+      {canManage && (
+        <Paper variant="outlined" sx={{ p: 2.5 }}>
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, md: 5 }}>
+              <TextField fullWidth label="Organization name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <TextField select fullWidth label="Type" value={form.organizationType} onChange={(event) => setForm({ ...form, organizationType: event.target.value as OrganizationType })}>
+                {organizationTypes.map((type) => <MenuItem key={type} value={type}>{type}</MenuItem>)}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, md: 2 }}>
+              <TextField select fullWidth label="Status" value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as RecordStatus })}>
+                {['ACTIVE', 'INACTIVE', 'ARCHIVED'].map((status) => <MenuItem key={status} value={status}>{status}</MenuItem>)}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, md: 2 }}>
+              <Button fullWidth variant="contained" onClick={save} disabled={!form.name}>Save</Button>
+            </Grid>
+          </Grid>
+        </Paper>
+      )}
+      {loading ? <LinearProgress /> : (
+        <Grid container spacing={2}>
+          {organizations.length === 0 && <Grid size={{ xs: 12 }}><Alert severity="info">No organizations found.</Alert></Grid>}
+          {organizations.map((organization) => (
+            <Grid key={organization.id} size={{ xs: 12, md: 6 }}>
+              <RecordCard
+                title={organization.name}
+                chips={[organization.organizationType, organization.status]}
+                lines={[canManage ? 'Select edit to update this organization.' : 'Read-only organization record.']}
+              />
+              {canManage && <Button sx={{ mt: 1 }} size="small" onClick={() => setForm(organization)}>Edit</Button>}
+            </Grid>
+          ))}
+        </Grid>
+      )}
+    </Stack>
+  );
+}
+
+function UsersPage() {
+  const { user, apiFetch } = useAuth();
+  const [users, setUsers] = useState<UserRecord[]>([]);
+  const [organizations, setOrganizations] = useState<OrganizationRecord[]>([]);
+  const [form, setForm] = useState(emptyUserForm);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState('');
+  const canManage = Boolean(user && canManageUsers(user.role));
+
+  const load = async () => {
+    setLoading(true);
+    const [usersResponse, organizationsResponse] = await Promise.all([
+      apiFetch(`${apiBaseUrl}/users`),
+      apiFetch(`${apiBaseUrl}/organizations`)
+    ]);
+    if (usersResponse.ok) setUsers(await usersResponse.json());
+    if (organizationsResponse.ok) setOrganizations(await organizationsResponse.json());
+    if (!usersResponse.ok || !organizationsResponse.ok) setMessage('Users could not be loaded.');
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  const save = async () => {
+    const url = form.id ? `${apiBaseUrl}/users/${form.id}` : `${apiBaseUrl}/users`;
+    const response = await apiFetch(url, {
+      method: form.id ? 'PATCH' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        organizationId: form.organizationId,
+        keycloakUserId: form.keycloakUserId,
+        fullName: form.fullName,
+        email: form.email,
+        role: form.role,
+        status: form.status
+      })
+    });
+    setMessage(response.ok ? 'User saved.' : 'User could not be saved.');
+    if (response.ok) {
+      setForm(emptyUserForm);
+      await load();
+    }
+  };
+
+  return (
+    <Stack spacing={3}>
+      <PageTitle title="Users" subtitle="Local user metadata synchronized with Keycloak identities." />
+      {message && <Alert severity={message.includes('could not') ? 'error' : 'success'}>{message}</Alert>}
+      {canManage && (
+        <Paper variant="outlined" sx={{ p: 2.5 }}>
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <TextField fullWidth label="Full name" value={form.fullName} onChange={(event) => setForm({ ...form, fullName: event.target.value })} />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <TextField fullWidth label="Email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <TextField fullWidth label="Keycloak user id" value={form.keycloakUserId} onChange={(event) => setForm({ ...form, keycloakUserId: event.target.value })} />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <TextField select fullWidth label="Organization" value={form.organizationId} onChange={(event) => setForm({ ...form, organizationId: event.target.value })}>
+                {organizations.map((organization) => <MenuItem key={organization.id} value={organization.id}>{organization.name}</MenuItem>)}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <TextField select fullWidth label="Role" value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value as Role })}>
+                {roles.map((role) => <MenuItem key={role} value={role}>{role}</MenuItem>)}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, md: 2 }}>
+              <TextField select fullWidth label="Status" value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as RecordStatus })}>
+                {['ACTIVE', 'INACTIVE', 'ARCHIVED'].map((status) => <MenuItem key={status} value={status}>{status}</MenuItem>)}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, md: 2 }}>
+              <Button fullWidth variant="contained" onClick={save} disabled={!form.organizationId || !form.keycloakUserId || !form.fullName || !form.email}>Save</Button>
+            </Grid>
+          </Grid>
+        </Paper>
+      )}
+      {loading ? <LinearProgress /> : (
+        <Grid container spacing={2}>
+          {users.length === 0 && <Grid size={{ xs: 12 }}><Alert severity="info">No users found.</Alert></Grid>}
+          {users.map((record) => (
+            <Grid key={record.id} size={{ xs: 12, md: 6 }}>
+              <RecordCard
+                title={record.fullName}
+                chips={[record.role, record.status]}
+                lines={[record.email, `Organization: ${record.organization?.name ?? record.organizationId}`]}
+              />
+              {canManage && <Button sx={{ mt: 1 }} size="small" onClick={() => setForm(record)}>Edit</Button>}
+            </Grid>
+          ))}
+        </Grid>
+      )}
     </Stack>
   );
 }
@@ -577,14 +1037,27 @@ function EngagementDetailPage() {
   const { user, apiFetch } = useAuth();
   const [engagement, setEngagement] = useState<EngagementRecord | null>(null);
   const [reports, setReports] = useState<ReportRecord[]>([]);
+  const [findings, setFindings] = useState<FindingRecord[]>([]);
+  const [assignees, setAssignees] = useState<UserOption[]>([]);
   const [form, setForm] = useState(emptyScopingForm);
   const [reportForm, setReportForm] = useState(emptyReportForm);
   const [reportFile, setReportFile] = useState<File | null>(null);
+  const [findingForm, setFindingForm] = useState(emptyFindingForm);
+  const [assignForm, setAssignForm] = useState({ findingId: '', assignedToUserId: '', dueDate: '' });
+  const [evidenceForm, setEvidenceForm] = useState(emptyEvidenceForm);
+  const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
+  const [revalidationForm, setRevalidationForm] = useState(emptyRevalidationForm);
+  const [riskAcceptanceForm, setRiskAcceptanceForm] = useState(emptyRiskAcceptanceForm);
   const [viewer, setViewer] = useState<{ title: string; url: string; protectedPdf: boolean } | null>(null);
   const [message, setMessage] = useState('');
   const [transitionRemarks, setTransitionRemarks] = useState('');
   const canScope = Boolean(user && canManageScoping(user.role));
   const canUploadReport = Boolean(user && canUploadReports(user.role));
+  const canCreateFinding = Boolean(user && canCreateFindings(user.role));
+  const canAssignFinding = Boolean(user && canAssignFindings(user.role));
+  const canRevalidateFinding = Boolean(user && canRevalidateFindings(user.role));
+  const canRequestRisk = Boolean(user && canRequestRiskAcceptance(user.role));
+  const canReviewRisk = Boolean(user && canReviewRiskAcceptance(user.role));
 
   const loadEngagement = async () => {
     if (!id) return;
@@ -598,10 +1071,27 @@ function EngagementDetailPage() {
     if (response.ok) setReports(await response.json());
   };
 
+  const loadFindings = async () => {
+    if (!id) return;
+    const response = await apiFetch(`${apiBaseUrl}/engagements/${id}/findings`);
+    if (response.ok) setFindings(await response.json());
+  };
+
+  const loadAssignees = async () => {
+    if (!canAssignFinding) return;
+    const response = await apiFetch(`${apiBaseUrl}/findings/assignees`);
+    if (response.ok) setAssignees(await response.json());
+  };
+
   useEffect(() => {
     void loadEngagement();
     void loadReports();
+    void loadFindings();
   }, [id]);
+
+  useEffect(() => {
+    void loadAssignees();
+  }, [canAssignFinding]);
 
   if (!engagement) {
     return <Alert severity="info">Loading engagement...</Alert>;
@@ -630,6 +1120,126 @@ function EngagementDetailPage() {
       setForm(emptyScopingForm);
       await loadEngagement();
     }
+  };
+
+  const createFinding = async () => {
+    const response = await apiFetch(`${apiBaseUrl}/engagements/${engagement.id}/findings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...findingForm,
+        cvssScore: findingForm.cvssScore || undefined,
+        impact: findingForm.impact || undefined,
+        recommendation: findingForm.recommendation || undefined,
+        cwe: findingForm.cwe || undefined,
+        owaspCategory: findingForm.owaspCategory || undefined,
+        dueDate: findingForm.dueDate || undefined
+      })
+    });
+    setMessage(response.ok ? 'Finding created.' : 'Finding could not be created.');
+    if (response.ok) {
+      setFindingForm(emptyFindingForm);
+      await loadFindings();
+      await loadEngagement();
+    }
+  };
+
+  const assignFinding = async () => {
+    if (!assignForm.findingId) return;
+    const response = await apiFetch(`${apiBaseUrl}/findings/${assignForm.findingId}/assign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        assignedToUserId: assignForm.assignedToUserId,
+        dueDate: assignForm.dueDate || undefined
+      })
+    });
+    setMessage(response.ok ? 'Finding assigned.' : 'Finding assignment failed.');
+    if (response.ok) {
+      setAssignForm({ findingId: '', assignedToUserId: '', dueDate: '' });
+      await loadFindings();
+      await loadEngagement();
+    }
+  };
+
+  const updateFindingStatus = async (findingId: string, targetStatus: FindingStatus, successMessage: string) => {
+    const response = await apiFetch(`${apiBaseUrl}/findings/${findingId}/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetStatus })
+    });
+    setMessage(response.ok ? successMessage : 'Finding status update failed.');
+    if (response.ok) {
+      await loadFindings();
+      await loadEngagement();
+    }
+  };
+
+  const uploadEvidence = async () => {
+    if (!evidenceForm.findingId) return;
+    const body = new FormData();
+    body.append('evidenceType', evidenceForm.evidenceType);
+    body.append('title', evidenceForm.title);
+    if (evidenceForm.notes) body.append('notes', evidenceForm.notes);
+    if (evidenceForm.jiraReference) body.append('jiraReference', evidenceForm.jiraReference);
+    if (evidenceForm.gitCommitReference) body.append('gitCommitReference', evidenceForm.gitCommitReference);
+    if (evidenceFile) body.append('file', evidenceFile);
+    const response = await apiFetch(`${apiBaseUrl}/findings/${evidenceForm.findingId}/evidence`, { method: 'POST', body });
+    setMessage(response.ok ? 'Evidence uploaded.' : 'Evidence upload failed.');
+    if (response.ok) {
+      setEvidenceForm(emptyEvidenceForm);
+      setEvidenceFile(null);
+      await loadFindings();
+    }
+  };
+
+  const recordRevalidation = async () => {
+    if (!revalidationForm.findingId) return;
+    const response = await apiFetch(`${apiBaseUrl}/findings/${revalidationForm.findingId}/revalidations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        result: revalidationForm.result,
+        revalidationDate: revalidationForm.revalidationDate || undefined,
+        remarks: revalidationForm.remarks || undefined
+      })
+    });
+    setMessage(response.ok ? 'Revalidation recorded.' : 'Revalidation could not be recorded.');
+    if (response.ok) {
+      setRevalidationForm(emptyRevalidationForm);
+      await loadFindings();
+      await loadEngagement();
+    }
+  };
+
+  const requestRiskAcceptance = async () => {
+    if (!riskAcceptanceForm.findingId) return;
+    const response = await apiFetch(`${apiBaseUrl}/findings/${riskAcceptanceForm.findingId}/risk-acceptances`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        riskDescription: riskAcceptanceForm.riskDescription,
+        businessJustification: riskAcceptanceForm.businessJustification,
+        mitigatingControls: riskAcceptanceForm.mitigatingControls || undefined,
+        expiryDate: riskAcceptanceForm.expiryDate,
+        requestNotes: riskAcceptanceForm.requestNotes || undefined
+      })
+    });
+    setMessage(response.ok ? 'Risk acceptance requested.' : 'Risk acceptance request failed.');
+    if (response.ok) {
+      setRiskAcceptanceForm(emptyRiskAcceptanceForm);
+      await loadFindings();
+    }
+  };
+
+  const reviewRiskAcceptance = async (riskAcceptanceId: string, status: 'APPROVED' | 'REJECTED') => {
+    const response = await apiFetch(`${apiBaseUrl}/risk-acceptances/${riskAcceptanceId}/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, reviewNotes: `${status} by NBP Security` })
+    });
+    setMessage(response.ok ? `Risk acceptance ${status.toLowerCase()}.` : 'Risk acceptance review failed.');
+    if (response.ok) await loadFindings();
   };
 
   const uploadReport = async () => {
@@ -721,6 +1331,259 @@ function EngagementDetailPage() {
             </Stack>
           </Grid>
         </Grid>
+      </Paper>
+
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
+        <Stack spacing={2}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <BugReportIcon color="primary" />
+            <Typography variant="h6">Findings</Typography>
+          </Stack>
+          {canCreateFinding && (
+            <Paper variant="outlined" sx={{ p: 2 }}>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, md: 2 }}>
+                  <TextField fullWidth label="Reference" value={findingForm.findingReference} onChange={(event) => setFindingForm({ ...findingForm, findingReference: event.target.value })} />
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <TextField fullWidth label="Title" value={findingForm.title} onChange={(event) => setFindingForm({ ...findingForm, title: event.target.value })} />
+                </Grid>
+                <Grid size={{ xs: 12, md: 2 }}>
+                  <TextField select fullWidth label="Severity" value={findingForm.severity} onChange={(event) => setFindingForm({ ...findingForm, severity: event.target.value as FindingSeverity })}>
+                    {findingSeverities.map((severity) => (
+                      <MenuItem key={severity} value={severity}>{severity}</MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid size={{ xs: 12, md: 2 }}>
+                  <TextField fullWidth label="CVSS" type="number" value={findingForm.cvssScore} onChange={(event) => setFindingForm({ ...findingForm, cvssScore: event.target.value })} />
+                </Grid>
+                <Grid size={{ xs: 12, md: 2 }}>
+                  <TextField fullWidth label="Due date" type="date" InputLabelProps={{ shrink: true }} value={findingForm.dueDate} onChange={(event) => setFindingForm({ ...findingForm, dueDate: event.target.value })} />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField fullWidth multiline minRows={3} label="Description" value={findingForm.description} onChange={(event) => setFindingForm({ ...findingForm, description: event.target.value })} />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField fullWidth multiline minRows={3} label="Recommendation" value={findingForm.recommendation} onChange={(event) => setFindingForm({ ...findingForm, recommendation: event.target.value })} />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField fullWidth label="CWE" value={findingForm.cwe} onChange={(event) => setFindingForm({ ...findingForm, cwe: event.target.value })} />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField fullWidth label="OWASP category" value={findingForm.owaspCategory} onChange={(event) => setFindingForm({ ...findingForm, owaspCategory: event.target.value })} />
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <Button variant="contained" onClick={createFinding} disabled={!findingForm.findingReference || !findingForm.title || !findingForm.description}>
+                    Create finding
+                  </Button>
+                </Grid>
+              </Grid>
+            </Paper>
+          )}
+          {canAssignFinding && findings.length > 0 && (
+            <Paper variant="outlined" sx={{ p: 2 }}>
+              <Grid container spacing={2} alignItems="center">
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <TextField select fullWidth label="Finding" value={assignForm.findingId} onChange={(event) => setAssignForm({ ...assignForm, findingId: event.target.value })}>
+                    {findings.map((finding) => (
+                      <MenuItem key={finding.id} value={finding.id}>{finding.findingReference} - {finding.title}</MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <TextField select fullWidth label="Assign to developer" value={assignForm.assignedToUserId} onChange={(event) => setAssignForm({ ...assignForm, assignedToUserId: event.target.value })}>
+                    {assignees.map((assignee) => (
+                      <MenuItem key={assignee.id} value={assignee.id}>{assignee.fullName}</MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid size={{ xs: 12, md: 2 }}>
+                  <TextField fullWidth label="Due date" type="date" InputLabelProps={{ shrink: true }} value={assignForm.dueDate} onChange={(event) => setAssignForm({ ...assignForm, dueDate: event.target.value })} />
+                </Grid>
+                <Grid size={{ xs: 12, md: 2 }}>
+                  <Button fullWidth variant="contained" startIcon={<AssignmentIndIcon />} onClick={assignFinding} disabled={!assignForm.findingId || !assignForm.assignedToUserId}>
+                    Assign
+                  </Button>
+                </Grid>
+              </Grid>
+            </Paper>
+          )}
+          <Grid container spacing={2}>
+            {findings.map((finding) => (
+              <Grid key={finding.id} size={{ xs: 12 }}>
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Stack spacing={1.5}>
+                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{finding.findingReference}: {finding.title}</Typography>
+                      <Chip label={finding.severity} color={finding.severity === 'CRITICAL' ? 'error' : finding.severity === 'HIGH' ? 'warning' : 'default'} size="small" />
+                      <Chip label={finding.status.replaceAll('_', ' ')} size="small" />
+                      <Chip label={finding.assignedTo?.fullName ?? 'Unassigned'} size="small" />
+                    </Stack>
+                    <Typography variant="body2" color="text.secondary">{finding.description}</Typography>
+                    {finding.recommendation && <Typography variant="body2">Recommendation: {finding.recommendation}</Typography>}
+                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                      {user?.role === 'PAYSYS_DEVELOPER' && finding.assignedToUserId === user.id && (
+                        <>
+                          <Button size="small" variant="outlined" onClick={() => updateFindingStatus(finding.id, 'IN_PROGRESS', 'Finding moved to in progress.')}>Start work</Button>
+                          <Button size="small" variant="contained" onClick={() => updateFindingStatus(finding.id, 'FIXED_PENDING_REVALIDATION', 'Finding marked fixed pending revalidation.')}>Mark fixed</Button>
+                        </>
+                      )}
+                      {canAssignFinding && finding.status === 'FIXED_PENDING_REVALIDATION' && (
+                        <Button size="small" variant="contained" onClick={() => updateFindingStatus(finding.id, 'FIXED_PENDING_REVALIDATION', 'Revalidation requested.')}>Request revalidation</Button>
+                      )}
+                      {canAssignFinding && finding.status === 'REVALIDATION_PASSED' && (
+                        <Button size="small" variant="contained" onClick={() => updateFindingStatus(finding.id, 'CLOSED', 'Finding closed.')}>Close finding</Button>
+                      )}
+                    </Stack>
+                    <Divider />
+                    <Grid container spacing={2}>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <Typography variant="subtitle2">Evidence</Typography>
+                        {finding.evidence.map((evidence) => (
+                          <Typography key={evidence.id} variant="body2" color="text.secondary">
+                            {evidence.title} ({evidence.evidenceType.replaceAll('_', ' ')}) {evidence.fileName ? `- ${evidence.fileName}` : ''}
+                          </Typography>
+                        ))}
+                        {finding.evidence.length === 0 && <Typography variant="body2" color="text.secondary">No evidence yet.</Typography>}
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <Typography variant="subtitle2">Revalidation</Typography>
+                        {finding.revalidations.map((revalidation) => (
+                          <Typography key={revalidation.id} variant="body2" color="text.secondary">
+                            {revalidation.result} on {formatDate(revalidation.revalidationDate)} {revalidation.remarks ? `- ${revalidation.remarks}` : ''}
+                          </Typography>
+                        ))}
+                        {finding.revalidations.length === 0 && <Typography variant="body2" color="text.secondary">No revalidation yet.</Typography>}
+                      </Grid>
+                      <Grid size={{ xs: 12 }}>
+                        <Typography variant="subtitle2">Risk Acceptance</Typography>
+                        {(finding.riskAcceptances ?? []).map((risk) => (
+                          <Stack key={risk.id} direction={{ xs: 'column', md: 'row' }} spacing={1} alignItems={{ xs: 'flex-start', md: 'center' }} sx={{ py: 0.5 }}>
+                            <Chip size="small" label={risk.status} color={risk.status === 'APPROVED' ? 'success' : risk.status === 'REJECTED' ? 'error' : 'default'} />
+                            <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
+                              {risk.riskDescription} - expires {formatDate(risk.expiryDate)}
+                            </Typography>
+                            {canReviewRisk && risk.status === 'REQUESTED' && (
+                              <>
+                                <Button size="small" variant="contained" onClick={() => reviewRiskAcceptance(risk.id, 'APPROVED')}>Approve</Button>
+                                <Button size="small" variant="outlined" onClick={() => reviewRiskAcceptance(risk.id, 'REJECTED')}>Reject</Button>
+                              </>
+                            )}
+                          </Stack>
+                        ))}
+                        {(finding.riskAcceptances ?? []).length === 0 && <Typography variant="body2" color="text.secondary">No risk acceptance requested.</Typography>}
+                      </Grid>
+                    </Grid>
+                  </Stack>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+          {findings.length === 0 && <Typography color="text.secondary">No findings have been created yet.</Typography>}
+          {findings.length > 0 && (
+            <Paper variant="outlined" sx={{ p: 2 }}>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <TextField select fullWidth label="Evidence finding" value={evidenceForm.findingId} onChange={(event) => setEvidenceForm({ ...evidenceForm, findingId: event.target.value })}>
+                    {findings.map((finding) => (
+                      <MenuItem key={finding.id} value={finding.id}>{finding.findingReference}</MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <TextField select fullWidth label="Evidence type" value={evidenceForm.evidenceType} onChange={(event) => setEvidenceForm({ ...evidenceForm, evidenceType: event.target.value as EvidenceType })}>
+                    {evidenceTypes.map((type) => (
+                      <MenuItem key={type} value={type}>{type.replaceAll('_', ' ')}</MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <TextField fullWidth label="Evidence title" value={evidenceForm.title} onChange={(event) => setEvidenceForm({ ...evidenceForm, title: event.target.value })} />
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <Button component="label" variant="outlined" startIcon={<UploadFileIcon />}>
+                    {evidenceFile ? evidenceFile.name : 'Attach file'}
+                    <input hidden type="file" onChange={(event) => setEvidenceFile(event.target.files?.[0] ?? null)} />
+                  </Button>
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField fullWidth label="JIRA reference" value={evidenceForm.jiraReference} onChange={(event) => setEvidenceForm({ ...evidenceForm, jiraReference: event.target.value })} />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField fullWidth label="Git commit" value={evidenceForm.gitCommitReference} onChange={(event) => setEvidenceForm({ ...evidenceForm, gitCommitReference: event.target.value })} />
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <TextField fullWidth multiline minRows={2} label="Evidence notes" value={evidenceForm.notes} onChange={(event) => setEvidenceForm({ ...evidenceForm, notes: event.target.value })} />
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <Button variant="contained" onClick={uploadEvidence} disabled={!evidenceForm.findingId || !evidenceForm.title}>Upload evidence</Button>
+                </Grid>
+              </Grid>
+            </Paper>
+          )}
+          {canRevalidateFinding && findings.length > 0 && (
+            <Paper variant="outlined" sx={{ p: 2 }}>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <TextField select fullWidth label="Revalidation finding" value={revalidationForm.findingId} onChange={(event) => setRevalidationForm({ ...revalidationForm, findingId: event.target.value })}>
+                    {findings.map((finding) => (
+                      <MenuItem key={finding.id} value={finding.id}>{finding.findingReference}</MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <TextField select fullWidth label="Result" value={revalidationForm.result} onChange={(event) => setRevalidationForm({ ...revalidationForm, result: event.target.value as RevalidationResult })}>
+                    <MenuItem value="PASSED">PASSED</MenuItem>
+                    <MenuItem value="FAILED">FAILED</MenuItem>
+                  </TextField>
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <TextField fullWidth label="Date" type="date" InputLabelProps={{ shrink: true }} value={revalidationForm.revalidationDate} onChange={(event) => setRevalidationForm({ ...revalidationForm, revalidationDate: event.target.value })} />
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <Button fullWidth variant="contained" onClick={recordRevalidation} disabled={!revalidationForm.findingId}>Record revalidation</Button>
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <TextField fullWidth multiline minRows={2} label="Revalidation remarks" value={revalidationForm.remarks} onChange={(event) => setRevalidationForm({ ...revalidationForm, remarks: event.target.value })} />
+                </Grid>
+              </Grid>
+            </Paper>
+          )}
+          {canRequestRisk && findings.length > 0 && (
+            <Paper variant="outlined" sx={{ p: 2 }}>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <TextField select fullWidth label="Risk finding" value={riskAcceptanceForm.findingId} onChange={(event) => setRiskAcceptanceForm({ ...riskAcceptanceForm, findingId: event.target.value })}>
+                    {findings.map((finding) => (
+                      <MenuItem key={finding.id} value={finding.id}>{finding.findingReference}</MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <TextField fullWidth label="Expiry date" type="date" InputLabelProps={{ shrink: true }} value={riskAcceptanceForm.expiryDate} onChange={(event) => setRiskAcceptanceForm({ ...riskAcceptanceForm, expiryDate: event.target.value })} />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField fullWidth label="Risk description" value={riskAcceptanceForm.riskDescription} onChange={(event) => setRiskAcceptanceForm({ ...riskAcceptanceForm, riskDescription: event.target.value })} />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField fullWidth multiline minRows={2} label="Business justification" value={riskAcceptanceForm.businessJustification} onChange={(event) => setRiskAcceptanceForm({ ...riskAcceptanceForm, businessJustification: event.target.value })} />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField fullWidth multiline minRows={2} label="Mitigating controls" value={riskAcceptanceForm.mitigatingControls} onChange={(event) => setRiskAcceptanceForm({ ...riskAcceptanceForm, mitigatingControls: event.target.value })} />
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <TextField fullWidth multiline minRows={2} label="Request notes" value={riskAcceptanceForm.requestNotes} onChange={(event) => setRiskAcceptanceForm({ ...riskAcceptanceForm, requestNotes: event.target.value })} />
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <Button variant="contained" onClick={requestRiskAcceptance} disabled={!riskAcceptanceForm.findingId || !riskAcceptanceForm.riskDescription || !riskAcceptanceForm.businessJustification || !riskAcceptanceForm.expiryDate}>
+                    Request risk acceptance
+                  </Button>
+                </Grid>
+              </Grid>
+            </Paper>
+          )}
+        </Stack>
       </Paper>
 
       <Paper variant="outlined" sx={{ p: 2.5 }}>
@@ -952,6 +1815,95 @@ function PdfViewerDialog({
   );
 }
 
+function AuditPage() {
+  const { apiFetch } = useAuth();
+  const [logs, setLogs] = useState<AuditLogRecord[]>([]);
+  const [filters, setFilters] = useState({ action: '', entityType: '', dateFrom: '', dateTo: '' });
+  const [message, setMessage] = useState('');
+
+  const load = async () => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) params.set(key, value);
+    });
+    const response = await apiFetch(`${apiBaseUrl}/audit-logs?${params.toString()}`);
+    if (response.ok) {
+      setLogs(await response.json());
+      setMessage('');
+    } else {
+      setMessage('Audit logs could not be loaded.');
+    }
+  };
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  const exportCsv = async () => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) params.set(key, value);
+    });
+    const response = await apiFetch(`${apiBaseUrl}/audit-logs/export?${params.toString()}`);
+    if (!response.ok) {
+      setMessage('Audit export failed.');
+      return;
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'securetracker-audit.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <Stack spacing={3}>
+      <PageTitle title="Audit" subtitle="Search and export system activity for governance review." />
+      {message && <Alert severity="error">{message}</Alert>}
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <TextField fullWidth label="Action" value={filters.action} onChange={(event) => setFilters({ ...filters, action: event.target.value })} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <TextField fullWidth label="Entity type" value={filters.entityType} onChange={(event) => setFilters({ ...filters, entityType: event.target.value })} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 2 }}>
+            <TextField fullWidth label="Date from" type="date" InputLabelProps={{ shrink: true }} value={filters.dateFrom} onChange={(event) => setFilters({ ...filters, dateFrom: event.target.value })} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 2 }}>
+            <TextField fullWidth label="Date to" type="date" InputLabelProps={{ shrink: true }} value={filters.dateTo} onChange={(event) => setFilters({ ...filters, dateTo: event.target.value })} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 2 }}>
+            <Stack direction="row" spacing={1}>
+              <Button variant="contained" onClick={load}>Search</Button>
+              <Button variant="outlined" onClick={exportCsv}>CSV</Button>
+            </Stack>
+          </Grid>
+        </Grid>
+      </Paper>
+      <Stack spacing={2}>
+        {logs.length === 0 && <Alert severity="info">No audit records match the current filters.</Alert>}
+        {logs.map((log) => (
+          <Paper key={log.id} variant="outlined" sx={{ p: 2 }}>
+            <Stack spacing={1}>
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                <Chip label={log.action} size="small" />
+                <Chip label={log.entityType} size="small" />
+                <Chip label={formatDate(log.createdAt)} size="small" />
+              </Stack>
+              <Typography variant="body2" color="text.secondary">User: {log.user?.email ?? 'System'}</Typography>
+              <Typography variant="body2" color="text.secondary">Entity: {log.entityId ?? 'Not applicable'}</Typography>
+            </Stack>
+          </Paper>
+        ))}
+      </Stack>
+    </Stack>
+  );
+}
+
 function nextEngagementStatuses(status: EngagementStatus, role?: Role): EngagementStatus[] {
   if (!role) return [];
   const transitions: Partial<Record<EngagementStatus, EngagementStatus[]>> = {
@@ -975,20 +1927,6 @@ function GuardedPage({ required, element }: { required: string; element: ReactEl
   }
 
   return element;
-}
-
-function RestrictedPage({ required, title }: { required: string; title: string }) {
-  return (
-    <GuardedPage
-      required={required}
-      element={
-        <Stack spacing={2}>
-          <Typography variant="h5">{title}</Typography>
-          <Alert severity="info">API-backed {title.toLowerCase()} management was introduced in v0.2.0.</Alert>
-        </Stack>
-      }
-    />
-  );
 }
 
 function PageTitle({ title, subtitle }: { title: string; subtitle: string }) {
