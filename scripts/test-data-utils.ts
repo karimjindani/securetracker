@@ -20,6 +20,7 @@ export interface ResetSummary extends CleanupSummary {
   baselineApplications: number;
   baselineEngagements: number;
   baselineScopingRecords: number;
+  baselineWhiteboxEngagements: number;
 }
 
 export async function cleanupRegressionData(prisma = new PrismaClient()): Promise<CleanupSummary> {
@@ -150,6 +151,7 @@ export async function resetToSeededData(prisma = new PrismaClient()): Promise<Re
   await prisma.vaptEngagement.deleteMany();
   await prisma.application.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.organization.deleteMany();
 
   const baseline = await seedBaselineData(prisma);
 
@@ -170,7 +172,8 @@ export async function seedBaselineData(prisma = new PrismaClient()) {
     baselineUsers,
     baselineApplications: baselineApplications.count,
     baselineEngagements: baselineEngagements.engagements,
-    baselineScopingRecords: baselineEngagements.scopingRecords
+    baselineScopingRecords: baselineEngagements.scopingRecords,
+    baselineWhiteboxEngagements: baselineEngagements.whiteboxEngagements
   };
 }
 
@@ -178,8 +181,7 @@ export async function seedBaselineOrganizations(prisma = new PrismaClient()) {
   const organizations = [
     { name: 'NBP', organizationType: 'NBP' as const },
     { name: 'Paysys Labs', organizationType: 'PAYSYS' as const },
-    { name: 'Apprise', organizationType: 'VENDOR' as const },
-    { name: 'Auditor', organizationType: 'AUDITOR' as const }
+    { name: 'Apprise', organizationType: 'VENDOR' as const }
   ];
 
   for (const organization of organizations) {
@@ -202,7 +204,7 @@ export async function seedBaselineUsers(prisma = new PrismaClient()) {
       fullName: 'System Admin',
       email: 'system.admin@example.local',
       role: 'SYSTEM_ADMIN' as const,
-      organizationName: 'Auditor'
+      organizationName: 'Paysys Labs'
     },
     {
       keycloakUserId: 'seed-nbp-admin',
@@ -244,7 +246,7 @@ export async function seedBaselineUsers(prisma = new PrismaClient()) {
       fullName: 'External Auditor',
       email: 'auditor@example.local',
       role: 'AUDITOR' as const,
-      organizationName: 'Auditor'
+      organizationName: 'NBP'
     }
   ];
 
@@ -275,38 +277,43 @@ export async function seedBaselineUsers(prisma = new PrismaClient()) {
 
 async function seedBaselineApplications(prisma: PrismaClient) {
   const paysysAdmin = await prisma.user.findUniqueOrThrow({ where: { email: 'paysys.admin@example.local' } });
-  const applications = [
-    {
-      name: 'Seeded Core Banking Portal',
-      description: 'Seeded application for v0.4.0 engagement workflow testing.',
-      businessOwnerName: 'Core Banking Business Owner',
-      technicalOwnerName: 'Core Banking Technical Owner',
-      environment: 'PRODUCTION' as const,
-      criticality: 'CRITICAL',
-      technologyStack: 'Java, PostgreSQL',
-      internetFacing: false
-    },
-    {
-      name: 'Seeded Mobile Banking API',
-      description: 'Seeded API for v0.4.0 engagement workflow testing.',
-      businessOwnerName: 'Digital Channels Owner',
-      technicalOwnerName: 'API Platform Owner',
-      environment: 'PRODUCTION' as const,
-      criticality: 'HIGH',
-      technologyStack: 'Node.js, PostgreSQL',
-      internetFacing: true
-    },
-    {
-      name: 'Seeded Internet Banking Web',
-      description: 'Seeded web application for v0.4.0 engagement workflow testing.',
-      businessOwnerName: 'Internet Banking Owner',
-      technicalOwnerName: 'Web Platform Owner',
-      environment: 'PRODUCTION' as const,
-      criticality: 'HIGH',
-      technologyStack: 'React, Java',
-      internetFacing: true
-    }
+  const names = [
+    'Core Banking Portal',
+    'Mobile Banking API',
+    'Internet Banking Web',
+    'Corporate Payments Gateway',
+    'ATM Switch Interface',
+    'Card Management System',
+    'Merchant Acquiring Portal',
+    'Digital Wallet Service',
+    'Loan Origination Platform',
+    'Treasury Operations Portal',
+    'Remittance Processing Hub',
+    'Fraud Monitoring Console',
+    'Customer Onboarding Portal',
+    'KYC Document Repository',
+    'Call Center CRM',
+    'Branch Teller System',
+    'Open Banking API',
+    'Data Warehouse Portal',
+    'Regulatory Reporting App',
+    'HR Self Service Portal',
+    'Vendor Management Portal',
+    'Statement Generation Service',
+    'Notification Gateway',
+    'Dispute Management System',
+    'API Developer Portal'
   ];
+  const applications = names.map((name, index) => ({
+    name: `Seeded ${name}`,
+    description: `Seeded application ${index + 1} for annual Whitebox VAPT validation.`,
+    businessOwnerName: `${name} Business Owner`,
+    technicalOwnerName: `${name} Technical Owner`,
+    environment: index % 5 === 0 ? ('UAT' as const) : ('PRODUCTION' as const),
+    criticality: index % 4 === 0 ? 'CRITICAL' : index % 3 === 0 ? 'MEDIUM' : 'HIGH',
+    technologyStack: index % 2 === 0 ? 'Java, PostgreSQL, React' : 'Node.js, PostgreSQL, Angular',
+    internetFacing: index % 3 !== 0
+  }));
 
   let count = 0;
   for (const application of applications) {
@@ -327,119 +334,77 @@ async function seedBaselineApplications(prisma: PrismaClient) {
 
 async function seedBaselineEngagements(prisma: PrismaClient) {
   const paysysAdmin = await prisma.user.findUniqueOrThrow({ where: { email: 'paysys.admin@example.local' } });
-  const nbpAdmin = await prisma.user.findUniqueOrThrow({ where: { email: 'nbp.admin@example.local' } });
   const apprise = await prisma.organization.findUniqueOrThrow({ where: { name: 'Apprise' } });
   const applications = await prisma.application.findMany({
     where: { name: { startsWith: 'Seeded ' } },
     orderBy: { name: 'asc' }
   });
-  const appByName = new Map(applications.map((application) => [application.name, application.id]));
   const currentYear = new Date().getFullYear();
-  const engagementInputs = [
-    {
-      title: 'Seeded Core Banking Planned Whitebox VAPT',
-      applicationName: 'Seeded Core Banking Portal',
-      assessmentType: 'WHITEBOX' as const,
-      status: 'PLANNED' as const,
-      plannedMonth: 'August'
-    },
-    {
-      title: 'Seeded Mobile Banking Paysys-Apprise Initiated VAPT',
-      applicationName: 'Seeded Mobile Banking API',
-      assessmentType: 'BLACK_GREY' as const,
-      status: 'PAYSYS_APPRISE_INITIATED' as const,
-      plannedMonth: 'September',
-      scoping: 'DRAFT' as const
-    },
-    {
-      title: 'Seeded Internet Banking Apprise Assessment VAPT',
-      applicationName: 'Seeded Internet Banking Web',
-      assessmentType: 'WHITEBOX' as const,
-      status: 'APPRISE_ASSESSMENT' as const,
-      plannedMonth: 'October',
-      scoping: 'FINAL' as const
-    },
-    {
-      title: 'Seeded Core Banking NBP Closing Meeting VAPT',
-      applicationName: 'Seeded Core Banking Portal',
-      assessmentType: 'BLACK_GREY' as const,
-      status: 'NBP_IS_REVIEW_CLOSING_MEETING' as const,
-      plannedMonth: 'November',
-      scoping: 'FINAL' as const
-    },
-    {
-      title: 'Seeded Mobile Banking Closed VAPT',
-      applicationName: 'Seeded Mobile Banking API',
-      assessmentType: 'WHITEBOX' as const,
-      status: 'CLOSED' as const,
-      plannedMonth: 'December',
-      scoping: 'FINAL' as const
-    }
-  ];
-
+  const h1Statuses = [
+    'PLANNED',
+    'PAYSYS_APPRISE_INITIATED',
+    'APPRISE_ASSESSMENT',
+    'DRAFT_REPORT_UPLOADED',
+    'PAYSYS_TRIAGE',
+    'DEVELOPER_FIX',
+    'FIXED_PENDING_REVALIDATION',
+    'APPRISE_REVALIDATION',
+    'FINAL_REPORT_UPLOADED',
+    'PAYSYS_IS_REVIEW_AND_COMMENT',
+    'NBP_IS_REVIEW_CLOSING_MEETING',
+    'CLOSED',
+    'GO_LIVE'
+  ] as const;
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   let scopingRecords = 0;
-  for (const input of engagementInputs) {
-    const applicationId = appByName.get(input.applicationName);
-    if (!applicationId) throw new Error(`Missing application for ${input.applicationName}`);
-    const existing = await prisma.vaptEngagement.findFirst({ where: { title: input.title } });
-    const engagement = existing
-      ? await prisma.vaptEngagement.update({
-        where: { id: existing.id },
+  let engagements = 0;
+  for (const [index, application] of applications.entries()) {
+    for (const half of [0, 1]) {
+      const monthIndex = (index % 6) + half * 6;
+      const weekInMonth = Math.floor(index / 6);
+      const day = 1 + weekInMonth * 7;
+      const plannedStartDate = new Date(Date.UTC(currentYear, monthIndex, day, 5, 0, 0));
+      const plannedEndDate = new Date(Date.UTC(currentYear, monthIndex, day + 4, 13, 0, 0));
+      const status = half === 0 ? h1Statuses[index % h1Statuses.length] : 'PLANNED';
+      const engagement = await prisma.vaptEngagement.create({
         data: {
-          applicationId,
-          assessmentType: input.assessmentType,
+          applicationId: application.id,
+          title: `Seeded ${application.name.replace(/^Seeded /, '')} H${half + 1} Whitebox VAPT`,
+          assessmentType: 'WHITEBOX',
           plannedYear: currentYear,
-          plannedMonth: input.plannedMonth,
+          plannedMonth: monthNames[monthIndex],
+          plannedStartDate,
+          plannedEndDate,
           vendorOrganizationId: apprise.id,
-          status: input.status,
-          closedById: input.status === 'CLOSED' ? nbpAdmin.id : null,
-          closedAt: input.status === 'CLOSED' ? new Date(`${currentYear}-01-15T10:00:00Z`) : null,
-          closureNotes: input.status === 'CLOSED' ? 'Seeded closed engagement for Go-Live transition testing.' : null
-        }
-      })
-      : await prisma.vaptEngagement.create({
-        data: {
-        applicationId,
-        title: input.title,
-        assessmentType: input.assessmentType,
-        plannedYear: currentYear,
-        plannedMonth: input.plannedMonth,
-        vendorOrganizationId: apprise.id,
-        status: input.status,
-        createdById: paysysAdmin.id,
-        closedById: input.status === 'CLOSED' ? nbpAdmin.id : undefined,
-        closedAt: input.status === 'CLOSED' ? new Date(`${currentYear}-01-15T10:00:00Z`) : undefined,
-        closureNotes: input.status === 'CLOSED' ? 'Seeded closed engagement for Go-Live transition testing.' : undefined
-      }
-    });
-
-    if (input.scoping) {
-      await prisma.scopingRecord.deleteMany({ where: { engagementId: engagement.id } });
-      await prisma.scopingRecord.create({
-        data: {
-          engagementId: engagement.id,
-          meetingDate: new Date(`${currentYear}-01-10T00:00:00Z`),
-          meetingTime: '10:00',
-          participants:
-            input.scoping === 'FINAL'
-              ? 'Paysys Labs Security, Apprise VAPT Team, NBP Information Security optional attendee'
-              : 'Paysys Labs Security, Apprise VAPT Team',
-          minutes: 'Seeded scoping notes for v0.4.0 testing. No passwords are stored.',
-          scopeIncluded: `${input.applicationName} application and exposed APIs.`,
-          scopeExcluded: 'Production credentials, destructive tests, and out-of-scope third-party systems.',
-          testingWindowStart: new Date(`${currentYear}-01-20T00:00:00Z`),
-          testingWindowEnd: new Date(`${currentYear}-01-30T00:00:00Z`),
-          testAccountsSummary: 'Seeded test account summary only; no passwords stored.',
-          architectureSummary: 'Seeded high-level architecture summary for workflow validation.',
-          recordStatus: input.scoping,
-          finalizedAt: input.scoping === 'FINAL' ? new Date(`${currentYear}-01-12T10:00:00Z`) : undefined,
-          finalizedById: input.scoping === 'FINAL' ? paysysAdmin.id : undefined,
+          status,
           createdById: paysysAdmin.id
         }
       });
-      scopingRecords += 1;
+      engagements += 1;
+      if (status !== 'PLANNED') {
+        await prisma.scopingRecord.create({
+          data: {
+            engagementId: engagement.id,
+            meetingDate: new Date(Date.UTC(currentYear, monthIndex, Math.max(1, day - 3), 5, 0, 0)),
+            meetingTime: '10:00',
+            participants: 'Paysys Labs Security, Apprise VAPT Team, NBP Information Security optional attendee',
+            minutes: 'Seeded scoping notes for annual validation. No passwords are stored.',
+            scopeIncluded: `${application.name} application, exposed APIs, and supporting integration points.`,
+            scopeExcluded: 'Production credentials, destructive tests, and out-of-scope third-party systems.',
+            testingWindowStart: plannedStartDate,
+            testingWindowEnd: plannedEndDate,
+            testAccountsSummary: 'Seeded test account summary only; no passwords stored.',
+            architectureSummary: 'Seeded high-level architecture summary for workflow validation.',
+            recordStatus: status === 'PAYSYS_APPRISE_INITIATED' ? 'DRAFT' : 'FINAL',
+            finalizedAt: status === 'PAYSYS_APPRISE_INITIATED' ? undefined : new Date(Date.UTC(currentYear, monthIndex, Math.max(1, day - 2), 5, 0, 0)),
+            finalizedById: status === 'PAYSYS_APPRISE_INITIATED' ? undefined : paysysAdmin.id,
+            createdById: paysysAdmin.id
+          }
+        });
+        scopingRecords += 1;
+      }
     }
   }
 
-  return { engagements: engagementInputs.length, scopingRecords };
+  return { engagements, scopingRecords, whiteboxEngagements: engagements };
 }

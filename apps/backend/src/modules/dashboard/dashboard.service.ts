@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { computeScheduleHealth, type ScheduleHealth } from '@securetracker/shared';
 import { PrismaService } from '../database/prisma.service.js';
 
 @Injectable()
@@ -66,6 +67,30 @@ export class DashboardService {
       this.prisma.revalidation.groupBy({ by: ['engagementId', 'result'], _count: { _all: true } }),
       this.prisma.report.groupBy({ by: ['engagementId', 'reportType'], _count: { _all: true } })
     ]);
+    const scheduleEngagements = await this.prisma.vaptEngagement.findMany({
+      where: { status: { notIn: ['CLOSED', 'GO_LIVE', 'CANCELLED'] } },
+      orderBy: [{ plannedEndDate: 'asc' }, { plannedStartDate: 'asc' }, { title: 'asc' }],
+      include: { application: true, vendorOrganization: true }
+    });
+    const scheduleRows = scheduleEngagements
+      .map((engagement) => ({
+        id: engagement.id,
+        title: engagement.title,
+        plannedStartDate: engagement.plannedStartDate,
+        plannedEndDate: engagement.plannedEndDate,
+        plannedMonth: engagement.plannedMonth,
+        plannedYear: engagement.plannedYear,
+        status: engagement.status,
+        scheduleHealth: computeScheduleHealth(engagement.status, engagement.plannedStartDate, engagement.plannedEndDate),
+        applicationName: engagement.application.name,
+        vendorName: engagement.vendorOrganization?.name
+      }))
+      .filter((engagement): engagement is typeof engagement & { scheduleHealth: ScheduleHealth } => Boolean(engagement.scheduleHealth));
+    const scheduleCounts = {
+      greenScheduleEngagements: scheduleRows.filter((engagement) => engagement.scheduleHealth === 'GREEN').length,
+      attentionEngagements: scheduleRows.filter((engagement) => engagement.scheduleHealth === 'YELLOW').length,
+      atRiskEngagements: scheduleRows.filter((engagement) => engagement.scheduleHealth === 'RED').length
+    };
 
     const engagements = await this.prisma.vaptEngagement.findMany({
       where: { id: { in: [...new Set([...heatmapRows.map((row) => row.engagementId), ...vendorRows.map((row) => row.engagementId), ...reportRows.map((row) => row.engagementId)])] } },
@@ -109,6 +134,7 @@ export class DashboardService {
         overdueFindings,
         acceptedRisks,
         expiringRisks,
+        ...scheduleCounts,
         revalidationSuccessRate: totalRevalidations === 0 ? 0 : Math.round((revalidationPassed / totalRevalidations) * 100)
       },
       heatmap: [...heatmap.values()],
@@ -119,8 +145,10 @@ export class DashboardService {
         plannedMonth: engagement.plannedMonth,
         plannedYear: engagement.plannedYear,
         applicationName: engagement.application.name,
-        vendorName: engagement.vendorOrganization?.name
+          vendorName: engagement.vendorOrganization?.name
       })),
+      scheduleAttentionEngagements: scheduleRows.filter((engagement) => engagement.scheduleHealth === 'YELLOW').slice(0, 6),
+      scheduleAtRiskEngagements: scheduleRows.filter((engagement) => engagement.scheduleHealth === 'RED').slice(0, 6),
       vendorPerformance: [...vendorPerformance.values()]
     };
   }

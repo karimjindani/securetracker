@@ -32,6 +32,9 @@ export const engagementStatuses = [
 
 export type EngagementStatus = typeof engagementStatuses[number];
 
+export const scheduleHealthStatuses = ['GREEN', 'YELLOW', 'RED'] as const;
+export type ScheduleHealth = typeof scheduleHealthStatuses[number];
+
 export const scopingRecordStatuses = ['DRAFT', 'FINAL'] as const;
 export type ScopingRecordStatus = typeof scopingRecordStatuses[number];
 
@@ -155,3 +158,39 @@ export const navigationByRole: Record<Role, string[]> = {
 };
 
 export const isRole = (value: string): value is Role => roles.includes(value as Role);
+
+export const isScheduleHealth = (value: string): value is ScheduleHealth =>
+  scheduleHealthStatuses.includes(value as ScheduleHealth);
+
+export const terminalEngagementStatuses: EngagementStatus[] = ['CLOSED', 'GO_LIVE', 'CANCELLED'];
+
+export function computeScheduleHealth(
+  status: EngagementStatus,
+  plannedStartDate?: Date | string | null,
+  plannedEndDate?: Date | string | null,
+  now = new Date(),
+  warningDays = 7
+): ScheduleHealth | undefined {
+  if (terminalEngagementStatuses.includes(status)) return undefined;
+
+  const start = toScheduleDate(plannedStartDate);
+  const end = toScheduleDate(plannedEndDate);
+  const today = startOfDay(now);
+  const warningLimit = new Date(today);
+  warningLimit.setUTCDate(warningLimit.getUTCDate() + warningDays);
+
+  if (end && startOfDay(end) < today) return 'RED';
+  if (end && startOfDay(end) <= warningLimit) return 'YELLOW';
+  if (status === 'PLANNED' && start && startOfDay(start) <= warningLimit) return 'YELLOW';
+  return 'GREEN';
+}
+
+function toScheduleDate(value?: Date | string | null) {
+  if (!value) return undefined;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+function startOfDay(value: Date) {
+  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+}

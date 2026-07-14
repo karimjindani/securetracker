@@ -1,6 +1,6 @@
 {
   "name": "securetracker",
-  "version": "0.18.3",
+  "version": "0.18.4",
   "private": true,
   "description": "VAPT Tracker Portal monorepo",
   "workspaces": [
@@ -15,7 +15,7 @@
     "test:regression": "playwright test --project=regression",
     "test:regression:headed": "playwright test --project=regression --headed",
     "test:data:cleanup": "tsx scripts/test-data-cleanup.ts",
-    "reset:seeded": "tsx scripts/reset-seeded.ts",
+    "reset:seeded": "prisma db push && tsx scripts/reset-seeded.ts",
     "ops": "node tools/ops-console/server.mjs",
     "ops:dev": "node tools/ops-console/server.mjs",
     "typecheck": "npm run typecheck -w @securetracker/shared && npm run build -w @securetracker/shared && npm run typecheck -w @securetracker/backend && npm run typecheck -w @securetracker/frontend",

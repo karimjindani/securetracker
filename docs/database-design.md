@@ -70,9 +70,9 @@ Every user belongs to an organization.
 
 Organizations include:
 
-- NBP
-- Paysys Labs
-- External Vendor, such as Apprise
+- NBP: client and governance authority
+- Paysys Labs: portal operator and development owner
+- Apprise: external VAPT security vendor
 
 ## 3.3 Immutable Final Records
 
@@ -132,7 +132,7 @@ erDiagram
 
 ## 5.1 organizations
 
-Stores organizations using the system.
+Stores the workflow parties using the system.
 
 Examples:
 

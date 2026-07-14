@@ -13,8 +13,28 @@ export interface UpsertOrganizationDto {
 export class OrganizationsService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  list() {
-    return this.prisma.organization.findMany({ orderBy: { name: 'asc' } });
+  async list() {
+    const organizations = await this.prisma.organization.findMany({ orderBy: { name: 'asc' } });
+    const userCounts = await this.prisma.user.groupBy({
+      by: ['organizationId'],
+      _count: { _all: true }
+    });
+    const engagementCounts = await this.prisma.vaptEngagement.groupBy({
+      by: ['vendorOrganizationId'],
+      where: { vendorOrganizationId: { not: null } },
+      _count: { _all: true }
+    });
+    const usersByOrganization = new Map(userCounts.map((count) => [count.organizationId, count._count._all]));
+    const engagementsByVendor = new Map(
+      engagementCounts.map((count) => [count.vendorOrganizationId, count._count._all])
+    );
+    return organizations.map((organization) => ({
+      ...organization,
+      _count: {
+        users: usersByOrganization.get(organization.id) ?? 0,
+        vendorEngagements: engagementsByVendor.get(organization.id) ?? 0
+      }
+    }));
   }
 
   async create(input: UpsertOrganizationDto, actor: CurrentUser) {

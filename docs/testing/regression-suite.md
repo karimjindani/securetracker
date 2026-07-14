@@ -44,6 +44,9 @@ npm.cmd run ops
 - List page filters update visible table rows while Dashboard remains metric-card based.
 - Notifications are created for assignment and due-check paths.
 - Users can view notifications, mark them read, and see unread counts update.
+- Seeded baseline restores 3 organizations, 7 users, 25 applications, and 50 annual Whitebox engagements.
+- Each seeded application has two Whitebox engagements spaced six months apart.
+- Engagements render as lifecycle Kanban data across planned, active, review, closed, and Go-Live states.
 
 ## Future Coverage Placeholders
 
@@ -51,7 +54,7 @@ Pending specs remain for reference data administration, system configuration, an
 
 ## Data Safety
 
-Regression-generated records must use the `REGRESSION_` prefix. Cleanup deletes only regression-prefixed applications, engagements, scoping records, report metadata, report versions, users, organizations, risk acceptance records, notifications, and related audit records. Reset removes business workflow data and restores seeded organizations, demo users, applications, engagements, and scoping records.
+Regression-generated records must use the `REGRESSION_` prefix. Cleanup deletes only regression-prefixed applications, engagements, scoping records, report metadata, report versions, users, organizations, risk acceptance records, notifications, and related audit records. Reset first synchronizes the local Prisma schema, then removes business workflow data and restores seeded organizations, demo users, applications, engagements, and scoping records.
 
 The external Ops Console at `http://127.0.0.1:3300` provides buttons for running regression, cleanup, and reset. It streams real command logs so startup and dependency failures are visible.
 
@@ -59,9 +62,12 @@ The external Ops Console at `http://127.0.0.1:3300` provides buttons for running
 
 The seeded baseline includes:
 
-- Three seeded applications.
-- Five seeded engagements covering planned, initiated, assessment, closing meeting, and closed states.
-- Draft and final scoping records for initiation/scoping regression.
+- Three seeded workflow-party organizations: NBP, Paysys Labs, and Apprise.
+- Seven seeded demo users mapped to those workflow parties.
+- Twenty-five seeded applications.
+- Fifty seeded annual Whitebox engagements, two per application, spaced six months apart.
+- Seeded engagements distributed so Apprise has no more than five planned assessments per month.
+- Draft and final scoping records for in-flight seeded engagements.
 - No real credentials, passwords, or seeded report PDFs.
 
 ## Browser Smoke
