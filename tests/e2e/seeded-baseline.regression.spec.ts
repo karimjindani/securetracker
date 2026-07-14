@@ -73,7 +73,12 @@ test('seeded validation baseline exposes organizations, users, applications, cal
 
   const engagementsResponse = await systemApi.get(`/engagements?year=${currentYear}`);
   expect(engagementsResponse.ok(), await engagementsResponse.text()).toBe(true);
-  const engagements = (await engagementsResponse.json()) as Array<{ title: string; status: string; scopingRecords?: unknown[] }>;
+  const engagements = (await engagementsResponse.json()) as Array<{
+    title: string;
+    status: string;
+    scheduleHealth?: 'GREEN' | 'YELLOW' | 'RED';
+    scopingRecords?: unknown[];
+  }>;
   const seededEngagements = engagements.filter((engagement) => engagement.title.startsWith('Seeded '));
   expect(seededEngagements).toHaveLength(50);
   expect(seededEngagements).toEqual(expect.arrayContaining([
@@ -84,4 +89,30 @@ test('seeded validation baseline exposes organizations, users, applications, cal
     expect.objectContaining({ status: 'GO_LIVE' })
   ]));
   expect(seededEngagements.some((engagement) => (engagement.scopingRecords?.length ?? 0) > 0)).toBe(true);
+  expect(seededEngagements.some((engagement) => engagement.scheduleHealth === 'GREEN')).toBe(true);
+
+  const dashboardResponse = await systemApi.get('/dashboard/summary');
+  expect(dashboardResponse.ok(), await dashboardResponse.text()).toBe(true);
+  const dashboard = (await dashboardResponse.json()) as {
+    greenScheduleEngagements: number;
+    attentionEngagements: number;
+    atRiskEngagements: number;
+    scheduleAttentionEngagements: Array<{ id: string; scheduleHealth: 'YELLOW' }>;
+    scheduleAtRiskEngagements: Array<{ id: string; scheduleHealth: 'RED' }>;
+  };
+  expect(dashboard.greenScheduleEngagements).toBeGreaterThan(0);
+  expect(dashboard.attentionEngagements + dashboard.atRiskEngagements).toBeGreaterThan(0);
+  expect(dashboard.scheduleAttentionEngagements.every((engagement) => engagement.scheduleHealth === 'YELLOW')).toBe(true);
+  expect(dashboard.scheduleAtRiskEngagements.every((engagement) => engagement.scheduleHealth === 'RED')).toBe(true);
+
+  const yellowEngagementsResponse = await systemApi.get(`/engagements?year=${currentYear}&scheduleHealth=YELLOW`);
+  expect(yellowEngagementsResponse.ok(), await yellowEngagementsResponse.text()).toBe(true);
+  const yellowEngagements = (await yellowEngagementsResponse.json()) as Array<{ scheduleHealth: string }>;
+  expect(yellowEngagements.length).toBeGreaterThan(0);
+  expect(yellowEngagements.every((engagement) => engagement.scheduleHealth === 'YELLOW')).toBe(true);
+
+  const redEngagementsResponse = await systemApi.get(`/engagements?year=${currentYear}&scheduleHealth=RED`);
+  expect(redEngagementsResponse.ok(), await redEngagementsResponse.text()).toBe(true);
+  const redEngagements = (await redEngagementsResponse.json()) as Array<{ scheduleHealth: string }>;
+  expect(redEngagements.every((engagement) => engagement.scheduleHealth === 'RED')).toBe(true);
 });

@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import type { CurrentUser } from '../auth/current-user.types.js';
 import { EngagementsService } from './engagements.service.js';
@@ -28,6 +28,44 @@ const notifications = {
 };
 
 describe('EngagementsService', () => {
+  it('adds schedule health and filters engagement lists by derived risk state', async () => {
+    const prisma = {
+      vaptEngagement: {
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: 'green-1',
+            title: 'Future VAPT',
+            status: 'PLANNED',
+            plannedStartDate: new Date('2026-08-01T00:00:00Z'),
+            plannedEndDate: new Date('2026-08-05T00:00:00Z')
+          },
+          {
+            id: 'red-1',
+            title: 'Expired VAPT',
+            status: 'PAYSYS_TRIAGE',
+            plannedStartDate: new Date('2026-07-01T00:00:00Z'),
+            plannedEndDate: new Date('2026-07-10T00:00:00Z')
+          }
+        ])
+      }
+    };
+
+    const result = await new EngagementsService(prisma as never, notifications as never).list({ scheduleHealth: 'RED' });
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: 'red-1',
+        scheduleHealth: 'RED'
+      })
+    ]);
+  });
+
+  it('rejects invalid schedule health filters', async () => {
+    expect(() => new EngagementsService({} as never, notifications as never).list({ scheduleHealth: 'BLUE' })).toThrow(
+      BadRequestException
+    );
+  });
+
   it('blocks non-NBP users from closing an engagement', async () => {
     const prisma = {
       vaptEngagement: {

@@ -124,6 +124,7 @@ export class DashboardService {
 
     const totalRevalidations = revalidationPassed + revalidationFailed;
     return {
+      ...scheduleCounts,
       metrics: {
         totalEngagements,
         plannedEngagements,
@@ -145,7 +146,7 @@ export class DashboardService {
         plannedMonth: engagement.plannedMonth,
         plannedYear: engagement.plannedYear,
         applicationName: engagement.application.name,
-          vendorName: engagement.vendorOrganization?.name
+        vendorName: engagement.vendorOrganization?.name
       })),
       scheduleAttentionEngagements: scheduleRows.filter((engagement) => engagement.scheduleHealth === 'YELLOW').slice(0, 6),
       scheduleAtRiskEngagements: scheduleRows.filter((engagement) => engagement.scheduleHealth === 'RED').slice(0, 6),

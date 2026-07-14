@@ -93,7 +93,7 @@ import {
 } from '@securetracker/shared';
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist';
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
-import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
+import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthProvider.js';
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
@@ -638,13 +638,43 @@ function Dashboard() {
     <Stack spacing={3}>
       <Box>
         <Typography variant="h5">Security Dashboard</Typography>
-        <Typography color="text.secondary">Live seeded validation, Kanban engagement, governance, findings, risk acceptance, and audit visibility for v0.18.4.</Typography>
+        <Typography color="text.secondary">Live schedule health, Kanban engagement, governance, findings, risk acceptance, and audit visibility for v0.18.5.</Typography>
       </Box>
       {message && <Alert severity="error">{message}</Alert>}
       {!summary ? (
         <LinearProgress />
       ) : (
         <>
+          <Grid container spacing={2}>
+            {[
+              ['On Track', metrics.greenScheduleEngagements, 'GREEN', 'Engagements not currently at schedule risk.'],
+              ['Needs Attention', metrics.attentionEngagements, 'YELLOW', 'Planned or active work approaching its planned window.'],
+              ['At Risk', metrics.atRiskEngagements, 'RED', 'Non-terminal work past its planned end date.']
+            ].map(([label, value, health, description]) => (
+              <Grid key={label} size={{ xs: 12, md: 4 }}>
+                <Paper variant="outlined" sx={{ p: 2, height: '100%', borderColor: scheduleHealthBorderColor(health as ScheduleHealth) }}>
+                  <Stack spacing={1}>
+                    <Stack direction="row" alignItems="center" justifyContent="space-between">
+                      <Typography variant="caption" color="text.secondary">{label}</Typography>
+                      <Chip label={health} size="small" color={scheduleHealthChipColor(health as ScheduleHealth)} />
+                    </Stack>
+                    <Typography variant="h4">{value ?? 0}</Typography>
+                    <Typography variant="body2" color="text.secondary">{description}</Typography>
+                    {health !== 'GREEN' && (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        component={Link}
+                        to={`/engagements?scheduleHealth=${health}`}
+                      >
+                        View {label}
+                      </Button>
+                    )}
+                  </Stack>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
           <Grid container spacing={2}>
             {[
               ['Total engagements', metrics.totalEngagements],
@@ -667,6 +697,52 @@ function Dashboard() {
             ))}
           </Grid>
           <Grid container spacing={2}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Paper variant="outlined" sx={{ p: 2.5, height: '100%' }}>
+                <Typography variant="h6" gutterBottom>Engagements that need attention</Typography>
+                <Stack spacing={1}>
+                  {summary.scheduleAttentionEngagements.length === 0 && <Typography color="text.secondary">No engagements currently need schedule attention.</Typography>}
+                  {summary.scheduleAttentionEngagements.map((engagement) => (
+                    <RecordCard
+                      key={engagement.id}
+                      title={engagement.title}
+                      chips={[engagement.scheduleHealth, engagement.status.replaceAll('_', ' '), String(engagement.plannedYear)]}
+                      lines={[
+                        `Application: ${engagement.applicationName}`,
+                        `Window: ${formatDate(engagement.plannedStartDate)} to ${formatDate(engagement.plannedEndDate)}`
+                      ]}
+                      action={<Button size="small" component={Link} to={`/engagements/${engagement.id}`}>Open</Button>}
+                    />
+                  ))}
+                  {summary.scheduleAttentionEngagements.length > 0 && (
+                    <Button component={Link} to="/engagements?scheduleHealth=YELLOW">View all needing attention</Button>
+                  )}
+                </Stack>
+              </Paper>
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Paper variant="outlined" sx={{ p: 2.5, height: '100%' }}>
+                <Typography variant="h6" gutterBottom>Engagements at risk</Typography>
+                <Stack spacing={1}>
+                  {summary.scheduleAtRiskEngagements.length === 0 && <Typography color="text.secondary">No engagements are currently past their planned window.</Typography>}
+                  {summary.scheduleAtRiskEngagements.map((engagement) => (
+                    <RecordCard
+                      key={engagement.id}
+                      title={engagement.title}
+                      chips={[engagement.scheduleHealth, engagement.status.replaceAll('_', ' '), String(engagement.plannedYear)]}
+                      lines={[
+                        `Application: ${engagement.applicationName}`,
+                        `Window: ${formatDate(engagement.plannedStartDate)} to ${formatDate(engagement.plannedEndDate)}`
+                      ]}
+                      action={<Button size="small" component={Link} to={`/engagements/${engagement.id}`}>Open</Button>}
+                    />
+                  ))}
+                  {summary.scheduleAtRiskEngagements.length > 0 && (
+                    <Button color="error" component={Link} to="/engagements?scheduleHealth=RED">View all at risk</Button>
+                  )}
+                </Stack>
+              </Paper>
+            </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
               <Paper variant="outlined" sx={{ p: 2.5, height: '100%' }}>
                 <Typography variant="h6" gutterBottom>Application Heatmap</Typography>
@@ -1339,16 +1415,21 @@ function CalendarPage() {
 
 function EngagementsPage() {
   const { apiFetch } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [engagements, setEngagements] = useState<EngagementRecord[]>([]);
   const [status, setStatus] = useState('');
   const [search, setSearch] = useState('');
   const [year, setYear] = useState(String(new Date().getFullYear()));
+  const [scheduleHealth, setScheduleHealth] = useState<ScheduleHealth | ''>(
+    isScheduleHealthValue(searchParams.get('scheduleHealth')) ? (searchParams.get('scheduleHealth') as ScheduleHealth) : ''
+  );
   const [message, setMessage] = useState('');
 
   const loadEngagements = async () => {
     const params = new URLSearchParams();
     if (year) params.set('year', year);
     if (status) params.set('status', status);
+    if (scheduleHealth) params.set('scheduleHealth', scheduleHealth);
     if (search.trim()) params.set('search', search.trim());
     const response = await apiFetch(`${apiBaseUrl}/engagements?${params.toString()}`);
     if (response.ok) {
@@ -1361,7 +1442,13 @@ function EngagementsPage() {
 
   useEffect(() => {
     void loadEngagements();
-  }, [status, year]);
+  }, [status, year, scheduleHealth]);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (scheduleHealth) params.set('scheduleHealth', scheduleHealth);
+    setSearchParams(params, { replace: true });
+  }, [scheduleHealth]);
 
   const visibleColumns = engagementKanbanColumns.map((column) => ({
     ...column,
@@ -1380,7 +1467,7 @@ function EngagementsPage() {
           <Grid size={{ xs: 12, md: 2 }}>
             <TextField fullWidth label="Year" value={year} onChange={(event) => setYear(event.target.value)} />
           </Grid>
-          <Grid size={{ xs: 12, md: 3 }}>
+          <Grid size={{ xs: 12, md: 2 }}>
             <TextField select fullWidth label="Status" value={status} onChange={(event) => setStatus(event.target.value)}>
               <MenuItem value="">All statuses</MenuItem>
               {engagementStatuses.map((value) => (
@@ -1388,7 +1475,15 @@ function EngagementsPage() {
               ))}
             </TextField>
           </Grid>
-          <Grid size={{ xs: 12, md: 3 }}>
+          <Grid size={{ xs: 12, md: 2 }}>
+            <TextField select fullWidth label="Schedule health" value={scheduleHealth} onChange={(event) => setScheduleHealth(event.target.value as ScheduleHealth | '')}>
+              <MenuItem value="">All health</MenuItem>
+              {['GREEN', 'YELLOW', 'RED'].map((value) => (
+                <MenuItem key={value} value={value}>{scheduleHealthLabel(value as ScheduleHealth)}</MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid size={{ xs: 12, md: 2 }}>
             <Button variant="contained" fullWidth sx={{ height: '100%' }} onClick={loadEngagements}>Refresh</Button>
           </Grid>
         </Grid>
@@ -1410,6 +1505,14 @@ function EngagementsPage() {
                     <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
                       <Chip label={engagement.status.replaceAll('_', ' ')} size="small" />
                       <Chip label={engagement.assessmentType.replaceAll('_', ' ')} size="small" color="primary" variant="outlined" />
+                      {engagement.scheduleHealth && (
+                        <Chip
+                          label={scheduleHealthLabel(engagement.scheduleHealth)}
+                          size="small"
+                          color={scheduleHealthChipColor(engagement.scheduleHealth)}
+                          variant="outlined"
+                        />
+                      )}
                     </Stack>
                     <Typography variant="caption" color="text.secondary">Vendor: {engagement.vendorOrganization?.name ?? 'Not assigned'}</Typography>
                     <Typography variant="caption" color="text.secondary">Window: {formatDate(engagement.plannedStartDate)} to {formatDate(engagement.plannedEndDate)}</Typography>
@@ -2462,7 +2565,7 @@ function PageTitle({ title, subtitle }: { title: string; subtitle: string }) {
   );
 }
 
-function RecordCard({ title, chips, lines }: { title: string; chips: string[]; lines: string[] }) {
+function RecordCard({ title, chips, lines, action }: { title: string; chips: string[]; lines: string[]; action?: ReactElement }) {
   return (
     <Paper variant="outlined" sx={{ p: 2.5, height: '100%' }}>
       <Stack spacing={1.5}>
@@ -2477,6 +2580,7 @@ function RecordCard({ title, chips, lines }: { title: string; chips: string[]; l
             {line}
           </Typography>
         ))}
+        {action}
       </Stack>
     </Paper>
   );
@@ -2542,6 +2646,28 @@ function organizationTypeLabel(type: OrganizationType) {
   if (type === 'PAYSYS') return 'SaaS Service Provider';
   if (type === 'VENDOR') return 'VAPT Service Provider';
   return 'Audit / Oversight';
+}
+
+function isScheduleHealthValue(value: string | null): value is ScheduleHealth {
+  return value === 'GREEN' || value === 'YELLOW' || value === 'RED';
+}
+
+function scheduleHealthLabel(value: ScheduleHealth) {
+  if (value === 'GREEN') return 'On Track';
+  if (value === 'YELLOW') return 'Needs Attention';
+  return 'At Risk';
+}
+
+function scheduleHealthChipColor(value: ScheduleHealth): 'success' | 'warning' | 'error' {
+  if (value === 'GREEN') return 'success';
+  if (value === 'YELLOW') return 'warning';
+  return 'error';
+}
+
+function scheduleHealthBorderColor(value: ScheduleHealth) {
+  if (value === 'GREEN') return 'success.light';
+  if (value === 'YELLOW') return 'warning.light';
+  return 'error.light';
 }
 
 function formatBytes(value: string) {

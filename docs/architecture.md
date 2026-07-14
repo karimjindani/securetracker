@@ -774,6 +774,12 @@ Implemented in v0.18.4:
 - Each seeded application has two Whitebox engagements spaced six months apart.
 - Engagements are distributed across lifecycle statuses so the Kanban board can be validated without manual data entry.
 
+Implemented in v0.18.5:
+
+- Schedule health is derived from engagement planned dates and lifecycle status.
+- Dashboard shows On Track, Needs Attention, and At Risk counts plus drill-down lists.
+- Engagements Kanban supports schedule-health filtering and card chips.
+
 ### Application Heatmap
 
 - Application-wise critical/high/medium/low findings

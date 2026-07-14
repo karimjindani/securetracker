@@ -306,3 +306,33 @@ Code reference:
 
 - Branch: `main`
 - Version: `0.18.4`
+
+## v0.18.5 - Schedule Health Dashboard Drill-Down
+
+Status: Implemented on main
+
+Version allocation:
+
+- `AGENTS.md` required remote version inspection before assigning the code version.
+- `origin/main` was fetched with prune, active remote branches were inspected, and the highest remote version found was `v0.18.4`.
+- This slice therefore uses `v0.18.5`.
+
+Baseline contents:
+
+- Derived schedule-health classification for engagements: `GREEN`, `YELLOW`, and `RED`.
+- Dashboard counts for On Track, Needs Attention, and At Risk engagements.
+- Dashboard short lists and links into filtered Engagements Kanban views.
+- Engagements API and Kanban schedule-health filtering.
+- Colored schedule-health chips on Kanban cards.
+
+Documentation references:
+
+- `docs/plans/v0.18.5-schedule-health-dashboard-plan.md`
+- `docs/testing/v0.18.5-test-results.md`
+- `docs/user-guides/v0.18.5-schedule-health-user-guide.md`
+- `docs/testing/regression-suite.md`
+
+Code reference:
+
+- Branch: `codex/v0.18.5-schedule-health-dashboard`
+- Version: `0.18.5`
