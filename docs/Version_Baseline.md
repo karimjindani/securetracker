@@ -274,3 +274,35 @@ Code reference:
 
 - Branch: `main`
 - Version: `0.18.3`
+
+## v0.18.4 - Seeded Validation Baseline, Kanban Engagements, and Admin Page Fixes
+
+Status: Implemented on main
+
+Version allocation:
+
+- `AGENTS.md` required remote version inspection before assigning the code version.
+- `origin/main` was fetched with prune, active remote branches were inspected, and the highest remote version found was `v0.18.3`.
+- This slice therefore uses `v0.18.4`.
+
+Baseline contents:
+
+- Reset applies Prisma schema sync before restoring seeded validation data.
+- Seeded baseline includes exactly 3 organizations: NBP, Paysys Labs, and Apprise.
+- Seeded baseline includes 7 demo users, 25 applications, and 50 annual Whitebox engagements.
+- Each seeded application has two Whitebox engagements spaced six months apart.
+- Seeded annual plan is distributed so Apprise has no more than five assessments per month.
+- Engagements page renders lifecycle Kanban columns instead of a table-first list.
+- Organizations page clarifies workflow-party meaning and shows user/vendor engagement counts.
+
+Documentation references:
+
+- `docs/plans/v0.18.4-seeded-kanban-admin-fix-plan.md`
+- `docs/testing/v0.18.4-test-results.md`
+- `docs/user-guides/v0.18.4-seeded-validation-user-guide.md`
+- `docs/testing/regression-suite.md`
+
+Code reference:
+
+- Branch: `main`
+- Version: `0.18.4`

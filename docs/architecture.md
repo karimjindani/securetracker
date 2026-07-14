@@ -766,6 +766,14 @@ Dashboards should be generated from PostgreSQL views or backend aggregation APIs
 - Overdue findings
 - Closure rate
 
+## Seeded Validation Baseline
+
+Implemented in v0.18.4:
+
+- Reset restores a deterministic validation set with 25 applications and 50 annual Whitebox engagements.
+- Each seeded application has two Whitebox engagements spaced six months apart.
+- Engagements are distributed across lifecycle statuses so the Kanban board can be validated without manual data entry.
+
 ### Application Heatmap
 
 - Application-wise critical/high/medium/low findings

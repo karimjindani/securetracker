@@ -14,6 +14,9 @@ Applications, VAPT Calendar, Engagements, Organizations, and Users now present l
 ### v0.18.3 Implementation Note
 Notifications are implemented as in-app records with unread counts, mark-read actions, System Admin due-check execution, and Mailpit-backed email delivery for workflow events.
 
+### v0.18.4 Implementation Note
+The seeded validation baseline now restores 3 workflow-party organizations, 7 demo users, 25 applications, and 50 annual Whitebox engagements. Engagements render as a Kanban board grouped by lifecycle stage.
+
 ---
 
 # Business Objectives

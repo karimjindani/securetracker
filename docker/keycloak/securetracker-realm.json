@@ -35,8 +35,8 @@
       "enabled": true,
       "emailVerified": true,
       "attributes": {
-        "organization_name": ["Platform"],
-        "organization_type": ["AUDITOR"]
+        "organization_name": ["Paysys Labs"],
+        "organization_type": ["PAYSYS"]
       },
       "credentials": [{ "type": "password", "value": "ChangeMe123!", "temporary": false }],
       "realmRoles": ["SYSTEM_ADMIN"]
@@ -105,8 +105,8 @@
       "enabled": true,
       "emailVerified": true,
       "attributes": {
-        "organization_name": ["Auditor"],
-        "organization_type": ["AUDITOR"]
+        "organization_name": ["NBP"],
+        "organization_type": ["NBP"]
       },
       "credentials": [{ "type": "password", "value": "ChangeMe123!", "temporary": false }],
       "realmRoles": ["AUDITOR"]

@@ -18,6 +18,8 @@ export interface UpsertCalendarEntryDto {
 export class CalendarService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
+  private readonly engagementInclude = { application: true, vendorOrganization: true, createdBy: true } as const;
+
   list(year?: string) {
     const parsedYear = year === undefined ? undefined : Number(year);
     if (year !== undefined && !Number.isInteger(parsedYear)) {
@@ -26,17 +28,18 @@ export class CalendarService {
 
     return this.prisma.vaptEngagement.findMany({
       where: {
-        status: 'PLANNED',
         plannedYear: parsedYear
       },
       orderBy: [{ plannedYear: 'asc' }, { plannedStartDate: 'asc' }, { title: 'asc' }],
-      include: { application: true, vendorOrganization: true, createdBy: true }
+      include: this.engagementInclude
     });
   }
 
   async create(input: UpsertCalendarEntryDto, actor: CurrentUser) {
     this.assertCanManage(actor);
     const data = this.validate(input, true);
+    const existing = await this.findExistingPlannedEntry(data);
+    if (existing) return existing;
     const engagement = await this.prisma.vaptEngagement.create({
       data: {
         applicationId: data.applicationId as string,
@@ -50,7 +53,7 @@ export class CalendarService {
         status: 'PLANNED',
         createdById: actor.id
       },
-      include: { application: true, vendorOrganization: true, createdBy: true }
+      include: this.engagementInclude
     });
     await this.audit(actor, 'CALENDAR_ENTRY_CREATED', engagement.id, undefined, engagement);
     return engagement;
@@ -66,7 +69,7 @@ export class CalendarService {
     const engagement = await this.prisma.vaptEngagement.update({
       where: { id },
       data,
-      include: { application: true, vendorOrganization: true, createdBy: true }
+      include: this.engagementInclude
     });
     await this.audit(actor, 'CALENDAR_ENTRY_UPDATED', engagement.id, before, engagement);
     return engagement;
@@ -120,6 +123,22 @@ export class CalendarService {
   private optionalText(value?: string) {
     const trimmed = value?.trim();
     return trimmed ? trimmed : undefined;
+  }
+
+  private findExistingPlannedEntry(data: ReturnType<CalendarService['validate']>) {
+    return this.prisma.vaptEngagement.findFirst({
+      where: {
+        applicationId: data.applicationId as string,
+        title: data.title as string,
+        assessmentType: data.assessmentType as AssessmentType,
+        plannedYear: data.plannedYear as number,
+        plannedMonth: data.plannedMonth ?? null,
+        plannedStartDate: data.plannedStartDate ?? null,
+        plannedEndDate: data.plannedEndDate ?? null,
+        status: 'PLANNED'
+      },
+      include: this.engagementInclude
+    });
   }
 
   private audit(actor: CurrentUser, action: string, entityId: string, oldValue: unknown, newValue: unknown) {

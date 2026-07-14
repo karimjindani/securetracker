@@ -4,9 +4,12 @@ import {
   canManageEngagements,
   canManageScoping,
   canMoveToGoLive,
+  computeScheduleHealth,
   engagementStatuses,
+  isScheduleHealth,
   type AssessmentType,
-  type EngagementStatus
+  type EngagementStatus,
+  type ScheduleHealth
 } from '@securetracker/shared';
 import type { CurrentUser } from '../auth/current-user.types.js';
 import { PrismaService } from '../database/prisma.service.js';
@@ -16,6 +19,7 @@ export interface ListEngagementsQuery {
   year?: string;
   status?: string;
   search?: string;
+  scheduleHealth?: string;
 }
 
 export interface UpdateEngagementDto {
@@ -78,6 +82,7 @@ export class EngagementsService {
       throw new BadRequestException('Year must be a number');
     }
     const status = this.parseStatus(query.status);
+    const scheduleHealth = this.parseScheduleHealth(query.scheduleHealth);
     const search = query.search?.trim();
 
     return this.prisma.vaptEngagement.findMany({
@@ -98,7 +103,11 @@ export class EngagementsService {
         createdBy: true,
         scopingRecords: { orderBy: { createdAt: 'desc' } }
       }
-    });
+    }).then((engagements) =>
+      engagements
+        .map((engagement) => this.withScheduleHealth(engagement))
+        .filter((engagement) => !scheduleHealth || engagement.scheduleHealth === scheduleHealth)
+    );
   }
 
   get(id: string) {
@@ -295,6 +304,19 @@ export class EngagementsService {
   private parseStatus(value?: string) {
     if (value === undefined || value.trim() === '') return undefined;
     return this.requireStatus(value);
+  }
+
+  private parseScheduleHealth(value?: string) {
+    if (value === undefined || value.trim() === '' || value === 'ALL') return undefined;
+    if (!isScheduleHealth(value)) throw new BadRequestException('Invalid schedule health');
+    return value as ScheduleHealth;
+  }
+
+  private withScheduleHealth<T extends { status: EngagementStatus; plannedStartDate?: Date | null; plannedEndDate?: Date | null }>(engagement: T) {
+    return {
+      ...engagement,
+      scheduleHealth: computeScheduleHealth(engagement.status, engagement.plannedStartDate, engagement.plannedEndDate)
+    };
   }
 
   private requireStatus(value: string) {

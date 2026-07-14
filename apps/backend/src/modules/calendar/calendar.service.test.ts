@@ -19,6 +19,7 @@ describe('CalendarService', () => {
     const engagement = { id: 'eng-1', title: 'Internet Banking VAPT', status: 'PLANNED' };
     const prisma = {
       vaptEngagement: {
+        findFirst: vi.fn().mockResolvedValue(null),
         create: vi.fn().mockResolvedValue(engagement)
       },
       auditLog: {
@@ -38,6 +39,18 @@ describe('CalendarService', () => {
     );
 
     expect(result).toBe(engagement);
+    expect(prisma.vaptEngagement.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          applicationId: 'app-1',
+          title: 'Internet Banking VAPT',
+          assessmentType: 'WHITEBOX',
+          plannedYear: 2026,
+          plannedMonth: 'July',
+          status: 'PLANNED'
+        })
+      })
+    );
     expect(prisma.vaptEngagement.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -57,6 +70,34 @@ describe('CalendarService', () => {
         })
       })
     );
+  });
+
+  it('returns an existing planned entry instead of creating a duplicate', async () => {
+    const engagement = { id: 'eng-existing', title: 'Internet Banking VAPT', status: 'PLANNED' };
+    const prisma = {
+      vaptEngagement: {
+        findFirst: vi.fn().mockResolvedValue(engagement),
+        create: vi.fn()
+      },
+      auditLog: {
+        create: vi.fn()
+      }
+    };
+
+    const result = await new CalendarService(prisma as never).create(
+      {
+        applicationId: 'app-1',
+        title: 'Internet Banking VAPT',
+        assessmentType: 'WHITEBOX',
+        plannedYear: 2026,
+        plannedMonth: 'July'
+      },
+      actor
+    );
+
+    expect(result).toBe(engagement);
+    expect(prisma.vaptEngagement.create).not.toHaveBeenCalled();
+    expect(prisma.auditLog.create).not.toHaveBeenCalled();
   });
 
   it('rejects an end date before the start date', async () => {

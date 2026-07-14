@@ -20,11 +20,10 @@ Generate the Prisma client:
 npm.cmd run db:generate
 ```
 
-Apply the local development schema and seed reference organizations:
+Apply the local development schema and seed the validation baseline:
 
 ```powershell
-npm.cmd run db:push
-npm.cmd run db:seed
+npm.cmd run reset:seeded
 ```
 
 Start the full containerized application:
@@ -36,6 +35,8 @@ docker compose up -d
 The Compose stack includes PostgreSQL, Keycloak, MinIO, Mailpit, backend API, and the Nginx-served frontend.
 
 Notification email delivery uses the SMTP settings in `.env.example`. Local Compose points the backend to the `smtp-test-service` Mailpit container, and delivered messages can be reviewed in the SMTP test UI.
+
+The seeded baseline includes 3 workflow-party organizations, 7 users, 25 applications, and 50 annual Whitebox engagements for frontend validation.
 
 For local source-level development, backend and frontend can still be started separately:
 

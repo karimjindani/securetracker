@@ -11,6 +11,7 @@ import {
   canRequestRiskAcceptance,
   canReviewRiskAcceptance,
   canViewAudit,
+  computeScheduleHealth,
   evidenceTypes,
   engagementStatuses,
   findingStatuses,
@@ -67,5 +68,17 @@ describe('securetracker shared enums', () => {
     expect(canReviewRiskAcceptance('NBP_SECURITY_ADMIN')).toBe(true);
     expect(canReviewRiskAcceptance('PAYSYS_SECURITY_ADMIN')).toBe(false);
     expect(canViewAudit('AUDITOR')).toBe(true);
+  });
+
+  it('computes schedule health from planned dates and lifecycle status', () => {
+    const now = new Date('2026-07-13T08:00:00Z');
+    expect(computeScheduleHealth('PLANNED', '2026-07-30', '2026-08-03', now)).toBe('GREEN');
+    expect(computeScheduleHealth('PLANNED', '2026-07-18', '2026-07-22', now)).toBe('YELLOW');
+    expect(computeScheduleHealth('PLANNED', '2026-07-10', '2026-07-20', now)).toBe('YELLOW');
+    expect(computeScheduleHealth('APPRISE_ASSESSMENT', '2026-07-01', '2026-07-18', now)).toBe('YELLOW');
+    expect(computeScheduleHealth('PAYSYS_TRIAGE', '2026-07-01', '2026-07-12', now)).toBe('RED');
+    expect(computeScheduleHealth('CLOSED', '2026-07-01', '2026-07-12', now)).toBeUndefined();
+    expect(computeScheduleHealth('GO_LIVE', '2026-07-01', '2026-07-12', now)).toBeUndefined();
+    expect(computeScheduleHealth('CANCELLED', '2026-07-01', '2026-07-12', now)).toBeUndefined();
   });
 });

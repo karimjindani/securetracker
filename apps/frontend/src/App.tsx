@@ -45,6 +45,7 @@ import {
   TableCell,
   TableContainer,
   TableHead,
+  TablePagination,
   TableRow,
   TextField,
   ThemeProvider,
@@ -86,6 +87,7 @@ import {
   type ReportType,
   type RevalidationResult,
   type RiskAcceptanceStatus,
+  type ScheduleHealth,
   type NotificationType,
   type Role
 } from '@securetracker/shared';
@@ -115,6 +117,10 @@ interface OrganizationRecord {
   name: string;
   organizationType: OrganizationType;
   status: RecordStatus;
+  _count?: {
+    users: number;
+    vendorEngagements: number;
+  };
 }
 
 interface UserRecord {
@@ -135,11 +141,27 @@ interface DashboardSummary {
     id: string;
     title: string;
     plannedStartDate?: string;
+    plannedEndDate?: string;
     plannedMonth?: string;
     plannedYear: number;
+    status?: EngagementStatus;
+    scheduleHealth?: ScheduleHealth;
     applicationName: string;
     vendorName?: string;
   }>;
+  scheduleAttentionEngagements: Array<{
+    id: string;
+    title: string;
+    plannedStartDate?: string;
+    plannedEndDate?: string;
+    plannedMonth?: string;
+    plannedYear: number;
+    status: EngagementStatus;
+    scheduleHealth: ScheduleHealth;
+    applicationName: string;
+    vendorName?: string;
+  }>;
+  scheduleAtRiskEngagements: DashboardSummary['scheduleAttentionEngagements'];
   vendorPerformance: Array<{ vendorName: string; reports: number; passed: number; failed: number }>;
 }
 
@@ -201,6 +223,7 @@ interface EngagementRecord extends CalendarEntry {
   actualStartDate?: string;
   actualEndDate?: string;
   closureNotes?: string;
+  scheduleHealth?: ScheduleHealth;
   scopingRecords?: ScopingRecord[];
   vendorOrganization?: { id: string; name: string };
 }
@@ -414,6 +437,71 @@ const navigation = [
   { id: 'audit', label: 'Audit', path: '/audit', icon: <AdminPanelSettingsIcon /> }
 ];
 
+const engagementKanbanColumns: Array<{ id: string; title: string; statuses: EngagementStatus[] }> = [
+  { id: 'planned', title: 'Planned', statuses: ['PLANNED'] },
+  { id: 'initiation', title: 'Initiation', statuses: ['PAYSYS_APPRISE_INITIATED'] },
+  { id: 'assessment', title: 'Assessment', statuses: ['APPRISE_ASSESSMENT'] },
+  { id: 'draft-triage', title: 'Draft & Triage', statuses: ['DRAFT_REPORT_UPLOADED', 'PAYSYS_TRIAGE'] },
+  { id: 'fix-revalidation', title: 'Fix & Revalidation', statuses: ['DEVELOPER_FIX', 'FIXED_PENDING_REVALIDATION', 'APPRISE_REVALIDATION'] },
+  { id: 'final-review', title: 'Final Review', statuses: ['FINAL_REPORT_UPLOADED', 'PAYSYS_IS_REVIEW_AND_COMMENT', 'NBP_IS_REVIEW_CLOSING_MEETING'] },
+  { id: 'closed-live', title: 'Closed & Go-Live', statuses: ['CLOSED', 'GO_LIVE'] },
+  { id: 'cancelled', title: 'Cancelled', statuses: ['CANCELLED'] }
+];
+
+const workflowPartyTypes = organizationTypes.filter((type) => type !== 'AUDITOR');
+
+const systemSettings = {
+  defaultPageSize: 10,
+  pageSizeOptions: [5, 10, 25, 50]
+};
+
+const monthOptions = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December'
+];
+
+function usePagination<T>(rows: T[]) {
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(systemSettings.defaultPageSize);
+
+  useEffect(() => {
+    setPage(0);
+  }, [rows]);
+
+  const paginatedRows = useMemo(
+    () => rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
+    [rows, page, rowsPerPage]
+  );
+
+  const pagination = (
+    <TablePagination
+      component="div"
+      count={rows.length}
+      page={rows.length === 0 ? 0 : Math.min(page, Math.max(0, Math.ceil(rows.length / rowsPerPage) - 1))}
+      rowsPerPage={rowsPerPage}
+      rowsPerPageOptions={systemSettings.pageSizeOptions}
+      labelRowsPerPage="Default Page Size"
+      onPageChange={(_event, nextPage) => setPage(nextPage)}
+      onRowsPerPageChange={(event) => {
+        setRowsPerPage(Number(event.target.value));
+        setPage(0);
+      }}
+    />
+  );
+
+  return { paginatedRows, pagination };
+}
+
 export function App() {
   return (
     <ThemeProvider theme={theme}>
@@ -435,17 +523,8 @@ function ProtectedShell() {
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
 
-  if (auth.status === 'loading') {
-    return <LoadingState />;
-  }
-
-  if (auth.status === 'anonymous') {
-    return <LoginScreen onLogin={auth.login} />;
-  }
-
-  const allowedNavigation = navigation.filter((item) => navigationByRole[auth.user.role].includes(item.id));
-
   const refreshUnreadCount = async () => {
+    if (auth.status !== 'authenticated') return;
     const response = await auth.apiFetch(`${apiBaseUrl}/notifications/unread-count`);
     if (response.ok) {
       const body = (await response.json()) as { count: number };
@@ -455,7 +534,17 @@ function ProtectedShell() {
 
   useEffect(() => {
     void refreshUnreadCount();
-  }, [auth.user.id]);
+  }, [auth.status === 'authenticated' ? auth.user.id : auth.status]);
+
+  if (auth.status === 'loading') {
+    return <LoadingState />;
+  }
+
+  if (auth.status === 'anonymous') {
+    return <LoginScreen onLogin={auth.login} />;
+  }
+
+  const allowedNavigation = navigation.filter((item) => navigationByRole[auth.user.role].includes(item.id));
 
   return (
     <>
@@ -549,7 +638,7 @@ function Dashboard() {
     <Stack spacing={3}>
       <Box>
         <Typography variant="h5">Security Dashboard</Typography>
-        <Typography color="text.secondary">Live governance, findings, risk acceptance, and audit visibility for v0.11.3.</Typography>
+        <Typography color="text.secondary">Live seeded validation, Kanban engagement, governance, findings, risk acceptance, and audit visibility for v0.18.4.</Typography>
       </Box>
       {message && <Alert severity="error">{message}</Alert>}
       {!summary ? (
@@ -641,6 +730,7 @@ function ApplicationsPage() {
   const [search, setSearch] = useState('');
   const [message, setMessage] = useState('');
   const canManage = Boolean(user && canManageApplications(user.role));
+  const { paginatedRows: paginatedApplications, pagination: applicationsPagination } = usePagination(applications);
 
   const loadApplications = async () => {
     const params = new URLSearchParams();
@@ -714,6 +804,7 @@ function ApplicationsPage() {
       <Paper variant="outlined" sx={{ p: 2.5 }}>
         <Stack spacing={2}>
           <TextField fullWidth label="Search applications" value={search} onChange={(event) => setSearch(event.target.value)} />
+          {applicationsPagination}
           <TableContainer sx={{ overflowX: 'auto' }}>
             <Table size="small">
               <TableHead>
@@ -728,7 +819,7 @@ function ApplicationsPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {applications.map((application) => (
+                {paginatedApplications.map((application) => (
                   <TableRow key={application.id} hover>
                     <TableCell>{application.name}</TableCell>
                     <TableCell>{application.environment}</TableCell>
@@ -773,6 +864,7 @@ function OrganizationsPage() {
       }),
     [organizations, filters]
   );
+  const { paginatedRows: paginatedOrganizations, pagination: organizationsPagination } = usePagination(filteredOrganizations);
 
   const loadOrganizations = async () => {
     setLoading(true);
@@ -806,7 +898,7 @@ function OrganizationsPage() {
 
   return (
     <Stack spacing={3}>
-      <PageTitle title="Organizations" subtitle="NBP, Paysys, Apprise, and auditor organization records." />
+      <PageTitle title="Organizations" subtitle="The three workflow parties: NBP bank/client, Paysys Labs SaaS service provider, and Apprise VAPT service provider." />
       {message && <Alert severity={message.includes('could not') ? 'error' : 'success'}>{message}</Alert>}
       {canManage && (
         <Paper variant="outlined" sx={{ p: 2.5 }}>
@@ -815,8 +907,8 @@ function OrganizationsPage() {
               <TextField fullWidth label="Organization name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
             </Grid>
             <Grid size={{ xs: 12, md: 3 }}>
-              <TextField select fullWidth label="Type" value={form.organizationType} onChange={(event) => setForm({ ...form, organizationType: event.target.value as OrganizationType })}>
-                {organizationTypes.map((type) => <MenuItem key={type} value={type}>{type}</MenuItem>)}
+              <TextField select fullWidth label="Workflow party" value={form.organizationType} onChange={(event) => setForm({ ...form, organizationType: event.target.value as OrganizationType })}>
+                {workflowPartyTypes.map((type) => <MenuItem key={type} value={type}>{organizationTypeLabel(type)}</MenuItem>)}
               </TextField>
             </Grid>
             <Grid size={{ xs: 12, md: 2 }}>
@@ -837,9 +929,9 @@ function OrganizationsPage() {
               <TextField fullWidth label="Search organizations" value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} />
             </Grid>
             <Grid size={{ xs: 12, md: 3 }}>
-              <TextField select fullWidth label="Type" value={filters.type} onChange={(event) => setFilters({ ...filters, type: event.target.value })}>
-                <MenuItem value="">All types</MenuItem>
-                {organizationTypes.map((type) => <MenuItem key={type} value={type}>{type}</MenuItem>)}
+              <TextField select fullWidth label="Workflow party" value={filters.type} onChange={(event) => setFilters({ ...filters, type: event.target.value })}>
+                <MenuItem value="">All workflow parties</MenuItem>
+                {workflowPartyTypes.map((type) => <MenuItem key={type} value={type}>{organizationTypeLabel(type)}</MenuItem>)}
               </TextField>
             </Grid>
             <Grid size={{ xs: 12, md: 3 }}>
@@ -850,39 +942,48 @@ function OrganizationsPage() {
             </Grid>
           </Grid>
           {loading ? <LinearProgress /> : (
-            <TableContainer sx={{ overflowX: 'auto' }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Name</TableCell>
-                    <TableCell>Type</TableCell>
-                    <TableCell>Status</TableCell>
-                    {canManage && <TableCell>Action</TableCell>}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredOrganizations.map((organization) => (
-                    <TableRow key={organization.id} hover>
-                      <TableCell>{organization.name}</TableCell>
-                      <TableCell>{organization.organizationType}</TableCell>
-                      <TableCell>{organization.status}</TableCell>
-                      {canManage && (
-                        <TableCell>
-                          <Button size="small" onClick={() => setForm(organization)}>Edit</Button>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                  {filteredOrganizations.length === 0 && (
+            <>
+              {organizationsPagination}
+              <TableContainer sx={{ overflowX: 'auto' }}>
+                <Table size="small">
+                  <TableHead>
                     <TableRow>
-                      <TableCell colSpan={canManage ? 4 : 3}>
-                        <Alert severity="info">No organizations match the current filters.</Alert>
-                      </TableCell>
+                      <TableCell>Name</TableCell>
+                      <TableCell>Workflow Party</TableCell>
+                      <TableCell>Portal Role</TableCell>
+                      <TableCell>Users</TableCell>
+                      <TableCell>Vendor Engagements</TableCell>
+                      <TableCell>Status</TableCell>
+                      {canManage && <TableCell>Action</TableCell>}
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {paginatedOrganizations.map((organization) => (
+                      <TableRow key={organization.id} hover>
+                        <TableCell>{organization.name}</TableCell>
+                        <TableCell>{organizationTypeLabel(organization.organizationType)}</TableCell>
+                        <TableCell>{organizationWorkflowRole(organization)}</TableCell>
+                        <TableCell>{organization._count?.users ?? 0}</TableCell>
+                        <TableCell>{organization._count?.vendorEngagements ?? 0}</TableCell>
+                        <TableCell>{organization.status}</TableCell>
+                        {canManage && (
+                          <TableCell>
+                            <Button size="small" onClick={() => setForm(organization)}>Edit</Button>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                    {filteredOrganizations.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={canManage ? 7 : 6}>
+                          <Alert severity="info">No organizations match the current filters.</Alert>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
           )}
         </Stack>
       </Paper>
@@ -911,6 +1012,7 @@ function UsersPage() {
       }),
     [users, filters]
   );
+  const { paginatedRows: paginatedUsers, pagination: usersPagination } = usePagination(filteredUsers);
 
   const load = async () => {
     setLoading(true);
@@ -1012,43 +1114,46 @@ function UsersPage() {
             </Grid>
           </Grid>
           {loading ? <LinearProgress /> : (
-            <TableContainer sx={{ overflowX: 'auto' }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Full Name</TableCell>
-                    <TableCell>Email</TableCell>
-                    <TableCell>Organization</TableCell>
-                    <TableCell>Role</TableCell>
-                    <TableCell>Status</TableCell>
-                    {canManage && <TableCell>Action</TableCell>}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredUsers.map((record) => (
-                    <TableRow key={record.id} hover>
-                      <TableCell>{record.fullName}</TableCell>
-                      <TableCell>{record.email}</TableCell>
-                      <TableCell>{record.organization?.name ?? record.organizationId}</TableCell>
-                      <TableCell>{record.role.replaceAll('_', ' ')}</TableCell>
-                      <TableCell>{record.status}</TableCell>
-                      {canManage && (
-                        <TableCell>
-                          <Button size="small" onClick={() => setForm(record)}>Edit</Button>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                  {filteredUsers.length === 0 && (
+            <>
+              {usersPagination}
+              <TableContainer sx={{ overflowX: 'auto' }}>
+                <Table size="small">
+                  <TableHead>
                     <TableRow>
-                      <TableCell colSpan={canManage ? 6 : 5}>
-                        <Alert severity="info">No users match the current filters.</Alert>
-                      </TableCell>
+                      <TableCell>Full Name</TableCell>
+                      <TableCell>Email</TableCell>
+                      <TableCell>Organization</TableCell>
+                      <TableCell>Role</TableCell>
+                      <TableCell>Status</TableCell>
+                      {canManage && <TableCell>Action</TableCell>}
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {paginatedUsers.map((record) => (
+                      <TableRow key={record.id} hover>
+                        <TableCell>{record.fullName}</TableCell>
+                        <TableCell>{record.email}</TableCell>
+                        <TableCell>{record.organization?.name ?? record.organizationId}</TableCell>
+                        <TableCell>{record.role.replaceAll('_', ' ')}</TableCell>
+                        <TableCell>{record.status}</TableCell>
+                        {canManage && (
+                          <TableCell>
+                            <Button size="small" onClick={() => setForm(record)}>Edit</Button>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                    {filteredUsers.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={canManage ? 6 : 5}>
+                          <Alert severity="info">No users match the current filters.</Alert>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
           )}
         </Stack>
       </Paper>
@@ -1061,20 +1166,32 @@ function CalendarPage() {
   const [applications, setApplications] = useState<ApplicationRecord[]>([]);
   const [entries, setEntries] = useState<CalendarEntry[]>([]);
   const [form, setForm] = useState(emptyCalendarForm);
-  const [statusFilter, setStatusFilter] = useState('');
+  const [filters, setFilters] = useState({ year: String(new Date().getFullYear()), startingMonth: '', status: '' });
   const [message, setMessage] = useState('');
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const canManage = Boolean(user && canManageCalendar(user.role));
 
-  const currentYear = useMemo(() => String(form.plannedYear), [form.plannedYear]);
   const filteredEntries = useMemo(
-    () => entries.filter((entry) => !statusFilter || entry.status === statusFilter),
-    [entries, statusFilter]
+    () =>
+      entries.filter((entry) => {
+        const matchesStatus = !filters.status || entry.status === filters.status;
+        const matchesStartingMonth =
+          !filters.startingMonth ||
+          entry.plannedMonth === filters.startingMonth ||
+          monthNameFromDate(entry.plannedStartDate) === filters.startingMonth;
+        return matchesStatus && matchesStartingMonth;
+      }),
+    [entries, filters.status, filters.startingMonth]
   );
+  const { paginatedRows: paginatedEntries, pagination: calendarPagination } = usePagination(filteredEntries);
 
   const loadData = async () => {
+    const calendarParams = new URLSearchParams();
+    if (filters.year.trim()) calendarParams.set('year', filters.year.trim());
     const [applicationsResponse, calendarResponse] = await Promise.all([
       apiFetch(`${apiBaseUrl}/applications`),
-      apiFetch(`${apiBaseUrl}/calendar?year=${currentYear}`)
+      apiFetch(`${apiBaseUrl}/calendar?${calendarParams.toString()}`)
     ]);
     if (applicationsResponse.ok) setApplications(await applicationsResponse.json());
     if (calendarResponse.ok) setEntries(await calendarResponse.json());
@@ -1082,23 +1199,32 @@ function CalendarPage() {
 
   useEffect(() => {
     void loadData();
-  }, [currentYear]);
+  }, [filters.year]);
 
   const submit = async () => {
-    const response = await apiFetch(`${apiBaseUrl}/calendar`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...form,
-        plannedYear: Number(form.plannedYear),
-        plannedStartDate: form.plannedStartDate || undefined,
-        plannedEndDate: form.plannedEndDate || undefined
-      })
-    });
-    setMessage(response.ok ? 'Calendar entry saved.' : 'Calendar entry could not be saved.');
-    if (response.ok) {
-      setForm({ ...emptyCalendarForm, plannedYear: form.plannedYear });
-      await loadData();
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      const response = await apiFetch(`${apiBaseUrl}/calendar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...form,
+          plannedYear: Number(form.plannedYear),
+          plannedStartDate: form.plannedStartDate || undefined,
+          plannedEndDate: form.plannedEndDate || undefined
+        })
+      });
+      setMessage(response.ok ? 'Calendar entry saved.' : 'Calendar entry could not be saved.');
+      if (response.ok) {
+        setFilters((current) => ({ ...current, year: String(form.plannedYear) }));
+        setForm({ ...emptyCalendarForm, plannedYear: form.plannedYear });
+        await loadData();
+      }
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   };
 
@@ -1130,7 +1256,10 @@ function CalendarPage() {
               <TextField fullWidth label="Year" type="number" value={form.plannedYear} onChange={(event) => setForm({ ...form, plannedYear: Number(event.target.value) })} />
             </Grid>
             <Grid size={{ xs: 12, md: 4 }}>
-              <TextField fullWidth label="Month" value={form.plannedMonth} onChange={(event) => setForm({ ...form, plannedMonth: event.target.value })} />
+              <TextField select fullWidth label="Starting Month" value={form.plannedMonth} onChange={(event) => setForm({ ...form, plannedMonth: event.target.value })}>
+                <MenuItem value="">Not set</MenuItem>
+                {monthOptions.map((month) => <MenuItem key={month} value={month}>{month}</MenuItem>)}
+              </TextField>
             </Grid>
             <Grid size={{ xs: 12, md: 4 }}>
               <TextField fullWidth label="Start date" type="date" InputLabelProps={{ shrink: true }} value={form.plannedStartDate} onChange={(event) => setForm({ ...form, plannedStartDate: event.target.value })} />
@@ -1139,7 +1268,7 @@ function CalendarPage() {
               <TextField fullWidth label="End date" type="date" InputLabelProps={{ shrink: true }} value={form.plannedEndDate} onChange={(event) => setForm({ ...form, plannedEndDate: event.target.value })} />
             </Grid>
             <Grid size={{ xs: 12 }}>
-              <Button variant="contained" onClick={submit} disabled={!form.applicationId}>Save planned VAPT</Button>
+              <Button variant="contained" onClick={submit} disabled={!form.applicationId || saving}>{saving ? 'Saving...' : 'Save planned VAPT'}</Button>
             </Grid>
           </Grid>
         </Paper>
@@ -1148,20 +1277,27 @@ function CalendarPage() {
         <Stack spacing={2}>
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, md: 4 }}>
-              <TextField fullWidth label="Year" type="number" value={form.plannedYear} onChange={(event) => setForm({ ...form, plannedYear: Number(event.target.value) })} />
+              <TextField fullWidth label="Year" type="number" value={filters.year} onChange={(event) => setFilters({ ...filters, year: event.target.value })} />
             </Grid>
             <Grid size={{ xs: 12, md: 4 }}>
-              <TextField select fullWidth label="Status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              <TextField select fullWidth label="Starting Month" value={filters.startingMonth} onChange={(event) => setFilters({ ...filters, startingMonth: event.target.value })}>
+                <MenuItem value="">All months</MenuItem>
+                {monthOptions.map((month) => <MenuItem key={month} value={month}>{month}</MenuItem>)}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <TextField select fullWidth label="Status" value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })}>
                 <MenuItem value="">All statuses</MenuItem>
                 {engagementStatuses.map((value) => (
                   <MenuItem key={value} value={value}>{value.replaceAll('_', ' ')}</MenuItem>
                 ))}
               </TextField>
             </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
+            <Grid size={{ xs: 12 }}>
               <Button variant="contained" fullWidth sx={{ height: '100%' }} onClick={loadData}>Refresh</Button>
             </Grid>
           </Grid>
+          {calendarPagination}
           <TableContainer sx={{ overflowX: 'auto' }}>
             <Table size="small">
               <TableHead>
@@ -1175,7 +1311,7 @@ function CalendarPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredEntries.map((entry) => (
+                {paginatedEntries.map((entry) => (
                   <TableRow key={entry.id} hover>
                     <TableCell>{entry.title}</TableCell>
                     <TableCell>{entry.application.name}</TableCell>
@@ -1206,28 +1342,45 @@ function EngagementsPage() {
   const [engagements, setEngagements] = useState<EngagementRecord[]>([]);
   const [status, setStatus] = useState('');
   const [search, setSearch] = useState('');
+  const [year, setYear] = useState(String(new Date().getFullYear()));
+  const [message, setMessage] = useState('');
 
   const loadEngagements = async () => {
     const params = new URLSearchParams();
+    if (year) params.set('year', year);
     if (status) params.set('status', status);
     if (search.trim()) params.set('search', search.trim());
     const response = await apiFetch(`${apiBaseUrl}/engagements?${params.toString()}`);
-    if (response.ok) setEngagements(await response.json());
+    if (response.ok) {
+      setEngagements(await response.json());
+      setMessage('');
+    } else {
+      setMessage('Engagements could not be loaded.');
+    }
   };
 
   useEffect(() => {
     void loadEngagements();
-  }, [status]);
+  }, [status, year]);
+
+  const visibleColumns = engagementKanbanColumns.map((column) => ({
+    ...column,
+    engagements: engagements.filter((engagement) => column.statuses.includes(engagement.status as EngagementStatus))
+  }));
 
   return (
     <Stack spacing={3}>
       <PageTitle title="Engagements" subtitle="Track VAPT engagements from planned initiation through closure and Go-Live." />
+      {message && <Alert severity="error">{message}</Alert>}
       <Paper variant="outlined" sx={{ p: 2.5 }}>
         <Grid container spacing={2}>
-          <Grid size={{ xs: 12, md: 5 }}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <TextField fullWidth label="Search" value={search} onChange={(event) => setSearch(event.target.value)} />
           </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
+          <Grid size={{ xs: 12, md: 2 }}>
+            <TextField fullWidth label="Year" value={year} onChange={(event) => setYear(event.target.value)} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
             <TextField select fullWidth label="Status" value={status} onChange={(event) => setStatus(event.target.value)}>
               <MenuItem value="">All statuses</MenuItem>
               {engagementStatuses.map((value) => (
@@ -1240,47 +1393,36 @@ function EngagementsPage() {
           </Grid>
         </Grid>
       </Paper>
-      <Paper variant="outlined" sx={{ p: 2.5 }}>
-        <TableContainer sx={{ overflowX: 'auto' }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Title</TableCell>
-                <TableCell>Application</TableCell>
-                <TableCell>Vendor</TableCell>
-                <TableCell>Assessment</TableCell>
-                <TableCell>Year</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Scoping</TableCell>
-                <TableCell>Action</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {engagements.map((engagement) => (
-                <TableRow key={engagement.id} hover>
-                  <TableCell>{engagement.title}</TableCell>
-                  <TableCell>{engagement.application.name}</TableCell>
-                  <TableCell>{engagement.vendorOrganization?.name ?? 'Not assigned'}</TableCell>
-                  <TableCell>{engagement.assessmentType.replaceAll('_', ' ')}</TableCell>
-                  <TableCell>{engagement.plannedYear}</TableCell>
-                  <TableCell>{engagement.status.replaceAll('_', ' ')}</TableCell>
-                  <TableCell>{engagement.scopingRecords?.length ?? 0}</TableCell>
-                  <TableCell>
-                    <Button size="small" component={Link} to={`/engagements/${engagement.id}`}>Open</Button>
-                  </TableCell>
-                </TableRow>
+      {engagements.length === 0 && <Alert severity="info">No engagements match the current filters.</Alert>}
+      <Box sx={{ display: 'grid', gridAutoFlow: 'column', gridAutoColumns: { xs: 'minmax(280px, 86vw)', md: '320px' }, gap: 2, overflowX: 'auto', pb: 1 }}>
+        {visibleColumns.map((column) => (
+          <Paper key={column.id} variant="outlined" sx={{ p: 1.5, minHeight: 420, bgcolor: '#f9fafb' }}>
+            <Stack spacing={1.5}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between">
+                <Typography variant="subtitle1" fontWeight={700}>{column.title}</Typography>
+                <Chip label={column.engagements.length} size="small" />
+              </Stack>
+              {column.engagements.map((engagement) => (
+                <Paper key={engagement.id} variant="outlined" sx={{ p: 1.5, bgcolor: '#fff' }}>
+                  <Stack spacing={1}>
+                    <Typography variant="body2" fontWeight={700}>{engagement.title}</Typography>
+                    <Typography variant="caption" color="text.secondary">{engagement.application.name}</Typography>
+                    <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+                      <Chip label={engagement.status.replaceAll('_', ' ')} size="small" />
+                      <Chip label={engagement.assessmentType.replaceAll('_', ' ')} size="small" color="primary" variant="outlined" />
+                    </Stack>
+                    <Typography variant="caption" color="text.secondary">Vendor: {engagement.vendorOrganization?.name ?? 'Not assigned'}</Typography>
+                    <Typography variant="caption" color="text.secondary">Window: {formatDate(engagement.plannedStartDate)} to {formatDate(engagement.plannedEndDate)}</Typography>
+                    <Typography variant="caption" color="text.secondary">Scoping records: {engagement.scopingRecords?.length ?? 0}</Typography>
+                    <Button size="small" variant="outlined" component={Link} to={`/engagements/${engagement.id}`}>Open</Button>
+                  </Stack>
+                </Paper>
               ))}
-              {engagements.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8}>
-                    <Alert severity="info">No engagements match the current filters.</Alert>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+              {column.engagements.length === 0 && <Typography variant="body2" color="text.secondary">No engagements in this stage.</Typography>}
+            </Stack>
+          </Paper>
+        ))}
+      </Box>
     </Stack>
   );
 }
@@ -2209,7 +2351,8 @@ function NotificationsPage({ onChanged }: { onChanged: () => void }) {
     }
   };
 
-  const visible = notifications.filter((entry) => !unreadOnly || !entry.isRead);
+  const visible = useMemo(() => notifications.filter((entry) => !unreadOnly || !entry.isRead), [notifications, unreadOnly]);
+  const { paginatedRows: paginatedNotifications, pagination: notificationsPagination } = usePagination(visible);
 
   return (
     <Stack spacing={3}>
@@ -2234,6 +2377,7 @@ function NotificationsPage({ onChanged }: { onChanged: () => void }) {
         </Stack>
       </Paper>
       <TableContainer component={Paper} variant="outlined">
+        {notificationsPagination}
         <Table size="small">
           <TableHead>
             <TableRow>
@@ -2246,7 +2390,7 @@ function NotificationsPage({ onChanged }: { onChanged: () => void }) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {visible.map((entry) => (
+            {paginatedNotifications.map((entry) => (
               <TableRow key={entry.id} hover>
                 <TableCell>
                   <Chip label={entry.isRead ? 'Read' : 'Unread'} size="small" color={entry.isRead ? 'default' : 'primary'} />
@@ -2377,6 +2521,27 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 function formatDate(value?: string) {
   if (!value) return 'Not set';
   return new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(value));
+}
+
+function monthNameFromDate(value?: string) {
+  if (!value) return undefined;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return monthOptions[date.getMonth()];
+}
+
+function organizationWorkflowRole(organization: OrganizationRecord) {
+  if (organization.name === 'NBP') return 'Client and governance authority';
+  if (organization.name === 'Paysys Labs') return 'Portal operator and development owner';
+  if (organization.name === 'Apprise') return 'External VAPT security vendor';
+  return organization.organizationType.replaceAll('_', ' ');
+}
+
+function organizationTypeLabel(type: OrganizationType) {
+  if (type === 'NBP') return 'Bank / Client';
+  if (type === 'PAYSYS') return 'SaaS Service Provider';
+  if (type === 'VENDOR') return 'VAPT Service Provider';
+  return 'Audit / Oversight';
 }
 
 function formatBytes(value: string) {

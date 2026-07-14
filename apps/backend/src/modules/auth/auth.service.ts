@@ -77,14 +77,17 @@ export class AuthService {
   }
 
   private defaultOrganizationType(role: Role): OrganizationType {
+    if (role === 'SYSTEM_ADMIN') return 'PAYSYS';
+    if (role === 'AUDITOR') return 'NBP';
     if (role.startsWith('NBP')) return 'NBP';
     if (role.startsWith('PAYSYS')) return 'PAYSYS';
     if (role === 'VENDOR_ADMIN') return 'VENDOR';
-    return 'AUDITOR';
+    return 'PAYSYS';
   }
 
   private defaultOrganizationName(role: Role, type: OrganizationType): string {
-    if (role === 'SYSTEM_ADMIN') return 'Platform';
+    if (role === 'SYSTEM_ADMIN') return 'Paysys Labs';
+    if (role === 'AUDITOR') return 'NBP';
     if (type === 'PAYSYS') return 'Paysys Labs';
     if (type === 'VENDOR') return 'Apprise';
     return type;

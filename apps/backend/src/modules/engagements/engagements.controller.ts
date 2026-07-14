@@ -18,8 +18,13 @@ export class EngagementsController {
   constructor(@Inject(EngagementsService) private readonly engagementsService: EngagementsService) {}
 
   @Get('engagements')
-  list(@Query('year') year?: string, @Query('status') status?: string, @Query('search') search?: string) {
-    return this.engagementsService.list({ year, status, search });
+  list(
+    @Query('year') year?: string,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+    @Query('scheduleHealth') scheduleHealth?: string
+  ) {
+    return this.engagementsService.list({ year, status, search, scheduleHealth });
   }
 
   @Get('engagements/:id')
