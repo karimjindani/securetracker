@@ -780,6 +780,14 @@ Implemented in v0.18.5:
 - Dashboard shows On Track, Needs Attention, and At Risk counts plus drill-down lists.
 - Engagements Kanban supports schedule-health filtering and card chips.
 
+Implemented in v0.18.6:
+
+- System Settings stores portal defaults such as `DEFAULT_PAGE_SIZE` in PostgreSQL.
+- System Admin can update Default Page Size from the Settings page; updates create audit records.
+- List-heavy tables consume the backend page-size setting.
+- Audit search results use the same paginated table pattern as other list-heavy pages.
+- Calendar list APIs accept `year` and `startingMonth` filters.
+
 ### Application Heatmap
 
 - Application-wise critical/high/medium/low findings
@@ -1082,3 +1090,7 @@ The current implemented architecture includes API-backed Organizations and Users
 ## v0.18.2 UI Note
 
 List-heavy portal pages use responsive tables for Applications, VAPT Calendar, Engagements, Organizations, and Users. Dashboard remains metric-card based because it is intended for summary visibility rather than row scanning.
+
+## v0.18.6 Settings Note
+
+Default Page Size is now a global portal setting. It is read through `GET /settings`, updated through `PATCH /settings` by `SYSTEM_ADMIN`, and applied by frontend table pagination.

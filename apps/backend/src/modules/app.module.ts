@@ -13,6 +13,7 @@ import { OrganizationsModule } from './organizations/organizations.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { ReportsModule } from './reports/reports.module.js';
 import { RiskAcceptanceModule } from './risk-acceptance/risk-acceptance.module.js';
+import { SettingsModule } from './settings/settings.module.js';
 import { UsersModule } from './users/users.module.js';
 
 @Module({
@@ -30,6 +31,7 @@ import { UsersModule } from './users/users.module.js';
     ReportsModule,
     RiskAcceptanceModule,
     NotificationsModule,
+    SettingsModule,
     OrganizationsModule,
     UsersModule
   ]

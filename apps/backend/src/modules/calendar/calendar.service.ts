@@ -19,16 +19,32 @@ export class CalendarService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   private readonly engagementInclude = { application: true, vendorOrganization: true, createdBy: true } as const;
+  private readonly monthNames = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December'
+  ];
 
-  list(year?: string) {
+  list(year?: string, startingMonth?: string) {
     const parsedYear = year === undefined ? undefined : Number(year);
     if (year !== undefined && !Number.isInteger(parsedYear)) {
       throw new BadRequestException('Year must be a number');
     }
+    const plannedMonth = this.validateStartingMonth(startingMonth);
 
     return this.prisma.vaptEngagement.findMany({
       where: {
-        plannedYear: parsedYear
+        plannedYear: parsedYear,
+        plannedMonth
       },
       orderBy: [{ plannedYear: 'asc' }, { plannedStartDate: 'asc' }, { title: 'asc' }],
       include: this.engagementInclude
@@ -139,6 +155,13 @@ export class CalendarService {
       },
       include: this.engagementInclude
     });
+  }
+
+  private validateStartingMonth(value?: string) {
+    if (value === undefined || value.trim() === '') return undefined;
+    const trimmed = value.trim();
+    if (!this.monthNames.includes(trimmed)) throw new BadRequestException('Starting month is invalid');
+    return trimmed;
   }
 
   private audit(actor: CurrentUser, action: string, entityId: string, oldValue: unknown, newValue: unknown) {

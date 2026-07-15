@@ -47,6 +47,7 @@ describe('securetracker shared enums', () => {
     expect(canManageScoping('PAYSYS_SECURITY_ADMIN')).toBe(true);
     expect(canManageScoping('NBP_SECURITY_ADMIN')).toBe(false);
     expect(canManageUsers('SYSTEM_ADMIN')).toBe(true);
+    expect(navigationByRole.SYSTEM_ADMIN).toContain('settings');
     expect(navigationByRole.AUDITOR).toEqual(['dashboard', 'applications', 'calendar', 'engagements', 'notifications', 'audit']);
     expect(navigationByRole.PAYSYS_SECURITY_ADMIN).not.toContain('users');
   });

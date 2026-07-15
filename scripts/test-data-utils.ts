@@ -15,6 +15,7 @@ export interface CleanupSummary {
 }
 
 export interface ResetSummary extends CleanupSummary {
+  baselineSettings: number;
   baselineOrganizations: number;
   baselineUsers: number;
   baselineApplications: number;
@@ -152,6 +153,7 @@ export async function resetToSeededData(prisma = new PrismaClient()): Promise<Re
   await prisma.application.deleteMany();
   await prisma.user.deleteMany();
   await prisma.organization.deleteMany();
+  await prisma.systemSetting.deleteMany();
 
   const baseline = await seedBaselineData(prisma);
 
@@ -162,12 +164,14 @@ export async function resetToSeededData(prisma = new PrismaClient()): Promise<Re
 }
 
 export async function seedBaselineData(prisma = new PrismaClient()) {
+  const baselineSettings = await seedBaselineSettings(prisma);
   const baselineOrganizations = await seedBaselineOrganizations(prisma);
   const baselineUsers = await seedBaselineUsers(prisma);
   const baselineApplications = await seedBaselineApplications(prisma);
   const baselineEngagements = await seedBaselineEngagements(prisma);
 
   return {
+    baselineSettings,
     baselineOrganizations,
     baselineUsers,
     baselineApplications: baselineApplications.count,
@@ -175,6 +179,16 @@ export async function seedBaselineData(prisma = new PrismaClient()) {
     baselineScopingRecords: baselineEngagements.scopingRecords,
     baselineWhiteboxEngagements: baselineEngagements.whiteboxEngagements
   };
+}
+
+export async function seedBaselineSettings(prisma = new PrismaClient()) {
+  await prisma.systemSetting.upsert({
+    where: { key: 'DEFAULT_PAGE_SIZE' },
+    update: { value: '10', updatedById: undefined },
+    create: { key: 'DEFAULT_PAGE_SIZE', value: '10' }
+  });
+
+  return 1;
 }
 
 export async function seedBaselineOrganizations(prisma = new PrismaClient()) {

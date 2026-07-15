@@ -1055,6 +1055,24 @@ Not implemented in v0.18.3:
 
 ---
 
+# v0.18.6 Implementation Status
+
+Implemented:
+
+- Initial Epic 16 system setting for global Default Page Size.
+- System Admin Settings page.
+- Audit logging for setting changes.
+- Calendar Year and Starting Month API filtering.
+- Duplicate Calendar create protection remains covered by regression.
+
+Not implemented in v0.18.6:
+
+- Reference data administration.
+- Advanced production notification scheduling controls.
+- Full production deployment hardening.
+
+---
+
 # Phase 2 Scope
 
 Epic 10 – Remediation Evidence

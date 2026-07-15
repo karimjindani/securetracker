@@ -36,7 +36,7 @@ The Compose stack includes PostgreSQL, Keycloak, MinIO, Mailpit, backend API, an
 
 Notification email delivery uses the SMTP settings in `.env.example`. Local Compose points the backend to the `smtp-test-service` Mailpit container, and delivered messages can be reviewed in the SMTP test UI.
 
-The seeded baseline includes 3 workflow-party organizations, 7 users, 25 applications, and 50 annual Whitebox engagements for frontend validation.
+The seeded baseline includes the Default Page Size setting, 3 workflow-party organizations, 7 users, 25 applications, and 50 annual Whitebox engagements for frontend validation.
 
 For local source-level development, backend and frontend can still be started separately:
 

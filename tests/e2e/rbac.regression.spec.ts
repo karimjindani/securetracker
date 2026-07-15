@@ -26,6 +26,31 @@ test('organization and user writes are restricted to System Admin', async () => 
   await auditorApi.dispose();
 });
 
+test('system settings are visible to authenticated users and writable only by System Admin', async () => {
+  const systemApi = await apiFor(seededUsers.systemAdmin);
+  const auditorApi = await apiFor(seededUsers.auditor);
+
+  const settings = await auditorApi.get('/settings');
+  expect(settings.ok(), await settings.text()).toBe(true);
+  expect(await settings.json()).toEqual(expect.objectContaining({
+    defaultPageSize: expect.any(Number),
+    pageSizeOptions: expect.arrayContaining([10, 25, 50, 100])
+  }));
+
+  const forbiddenUpdate = await auditorApi.patch('/settings', { data: { defaultPageSize: 25 } });
+  expect(forbiddenUpdate.status()).toBe(403);
+
+  const update = await systemApi.patch('/settings', { data: { defaultPageSize: 25 } });
+  expect(update.ok(), await update.text()).toBe(true);
+  expect(await update.json()).toEqual(expect.objectContaining({ defaultPageSize: 25 }));
+
+  const invalidUpdate = await systemApi.patch('/settings', { data: { defaultPageSize: 7 } });
+  expect(invalidUpdate.status()).toBe(400);
+
+  await systemApi.dispose();
+  await auditorApi.dispose();
+});
+
 test('application and calendar permissions follow documented roles', async () => {
   const paysysApi = await apiFor(seededUsers.paysysAdmin);
   const nbpApi = await apiFor(seededUsers.nbpAdmin);
@@ -51,16 +76,35 @@ test('application and calendar permissions follow documented roles', async () =>
   });
   expect(auditorApplication.status()).toBe(403);
 
+  const calendarTitle = regressionName('CALENDAR');
   const calendarEntry = await nbpApi.post('/calendar', {
     data: {
       applicationId: applicationBody.id,
-      title: regressionName('CALENDAR'),
+      title: calendarTitle,
       assessmentType: 'WHITEBOX',
       plannedYear: new Date().getFullYear(),
       plannedMonth: 'July'
     }
   });
   expect(calendarEntry.ok(), await calendarEntry.text()).toBe(true);
+  const calendarBody = (await calendarEntry.json()) as { id: string };
+
+  const duplicateCalendarEntry = await nbpApi.post('/calendar', {
+    data: {
+      applicationId: applicationBody.id,
+      title: calendarTitle,
+      assessmentType: 'WHITEBOX',
+      plannedYear: new Date().getFullYear(),
+      plannedMonth: 'July'
+    }
+  });
+  expect(duplicateCalendarEntry.ok(), await duplicateCalendarEntry.text()).toBe(true);
+  expect((await duplicateCalendarEntry.json()) as { id: string }).toEqual(expect.objectContaining({ id: calendarBody.id }));
+
+  const julyCalendar = await nbpApi.get(`/calendar?year=${new Date().getFullYear()}&startingMonth=July`);
+  expect(julyCalendar.ok(), await julyCalendar.text()).toBe(true);
+  const julyEntries = (await julyCalendar.json()) as Array<{ plannedMonth?: string }>;
+  expect(julyEntries.every((entry) => entry.plannedMonth === 'July')).toBe(true);
 
   const invalidCalendarEntry = await nbpApi.post('/calendar', {
     data: {

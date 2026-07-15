@@ -12,8 +12,8 @@ export class CalendarController {
   constructor(@Inject(CalendarService) private readonly calendarService: CalendarService) {}
 
   @Get()
-  list(@Query('year') year?: string) {
-    return this.calendarService.list(year);
+  list(@Query('year') year?: string, @Query('startingMonth') startingMonth?: string) {
+    return this.calendarService.list(year, startingMonth);
   }
 
   @Post()

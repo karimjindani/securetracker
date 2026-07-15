@@ -148,7 +148,7 @@ export const canManageOrganizations = (role: Role): boolean => role === 'SYSTEM_
 export const canManageUsers = (role: Role): boolean => role === 'SYSTEM_ADMIN';
 
 export const navigationByRole: Record<Role, string[]> = {
-  SYSTEM_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'users', 'notifications', 'audit'],
+  SYSTEM_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'users', 'notifications', 'audit', 'settings'],
   NBP_SECURITY_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'notifications', 'audit'],
   NBP_VIEWER: ['dashboard', 'applications', 'calendar', 'engagements', 'notifications'],
   PAYSYS_SECURITY_ADMIN: ['dashboard', 'applications', 'calendar', 'engagements', 'organizations', 'notifications', 'audit'],

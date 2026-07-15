@@ -20,6 +20,9 @@ The seeded validation baseline now restores 3 workflow-party organizations, 7 de
 ### v0.18.5 Implementation Note
 Dashboard schedule health now classifies planned and active engagements as On Track, Needs Attention, or At Risk based on planned dates and lifecycle status. Dashboard drill-down links open the Engagements Kanban with the matching schedule-health filter.
 
+### v0.18.6 Implementation Note
+System Admin users can manage the global Default Page Size setting. List-heavy pages use that setting for pagination, Audit search now renders as a paginated table, and VAPT Calendar supports server-side filtering by Year and Starting Month while preserving duplicate-create protection.
+
 ---
 
 # Business Objectives

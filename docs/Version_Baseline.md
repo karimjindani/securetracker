@@ -336,3 +336,34 @@ Code reference:
 
 - Branch: `codex/v0.18.5-schedule-health-dashboard`
 - Version: `0.18.5`
+
+## v0.18.6 - UX Stabilization and Data Quality
+
+Status: Implemented on feature branch
+
+Version allocation:
+
+- `AGENTS.md` required remote version inspection before assigning the code version.
+- `origin/main` was fetched with prune, active remote branches were inspected, and the highest remote version found was `v0.18.5`.
+- This slice therefore uses `v0.18.6`.
+
+Baseline contents:
+
+- Database-backed System Settings module with `DEFAULT_PAGE_SIZE`.
+- System Admin Settings page for updating Default Page Size.
+- Table pagination driven by the backend setting across list-heavy pages.
+- Audit search results rendered as a paginated table.
+- Calendar API supports `startingMonth` filtering alongside `year`.
+- Duplicate Calendar create behavior remains idempotent for identical planned entries.
+
+Documentation references:
+
+- `docs/plans/v0.18.6-ux-stabilization-plan.md`
+- `docs/testing/v0.18.6-test-results.md`
+- `docs/user-guides/v0.18.6-ux-stabilization-user-guide.md`
+- `docs/testing/regression-suite.md`
+
+Code reference:
+
+- Branch: `codex/v0.18.6-ux-stabilization`
+- Version: `0.18.6`
