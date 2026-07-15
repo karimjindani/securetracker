@@ -42,6 +42,10 @@ npm.cmd run ops
 - Auditor searches audit logs and exports CSV.
 - Applications, VAPT Calendar, Engagements, Organizations, and Users render list data in tables.
 - List page filters update visible table rows while Dashboard remains metric-card based.
+- Default Page Size is loaded from System Settings and can be updated only by System Admin.
+- Calendar filters include Year and Starting Month.
+- Duplicate planned Calendar submissions return the existing engagement.
+- Audit search results render in the paginated table pattern.
 - Notifications are created for assignment and due-check paths.
 - Users can view notifications, mark them read, and see unread counts update.
 - Seeded baseline restores 3 organizations, 7 users, 25 applications, and 50 annual Whitebox engagements.
@@ -51,11 +55,11 @@ npm.cmd run ops
 
 ## Future Coverage Placeholders
 
-Pending specs remain for reference data administration, system configuration, and deeper production notification scheduling.
+Pending specs remain for reference data administration and deeper production notification scheduling.
 
 ## Data Safety
 
-Regression-generated records must use the `REGRESSION_` prefix. Cleanup deletes only regression-prefixed applications, engagements, scoping records, report metadata, report versions, users, organizations, risk acceptance records, notifications, and related audit records. Reset first synchronizes the local Prisma schema, then removes business workflow data and restores seeded organizations, demo users, applications, engagements, and scoping records.
+Regression-generated records must use the `REGRESSION_` prefix. Cleanup deletes only regression-prefixed applications, engagements, scoping records, report metadata, report versions, users, organizations, risk acceptance records, notifications, and related audit records. Reset first synchronizes the local Prisma schema, then removes business workflow data and restores seeded settings, organizations, demo users, applications, engagements, and scoping records.
 
 The external Ops Console at `http://127.0.0.1:3300` provides buttons for running regression, cleanup, and reset. It streams real command logs so startup and dependency failures are visible.
 

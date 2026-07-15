@@ -577,6 +577,20 @@ Stores in-app and email notification records.
 | created_at | TIMESTAMP | Yes | Creation timestamp |
 | read_at | TIMESTAMP | No | Read timestamp |
 
+## 14.2 system_settings
+
+Stores global portal settings used by the application UI and operations.
+
+| Column | Type | Required | Notes |
+|---|---|---|---|
+| key | VARCHAR(80) | Yes | Primary key, for example `DEFAULT_PAGE_SIZE` |
+| value | VARCHAR(255) | Yes | Setting value stored as text |
+| updated_by_id | UUID | No | User id that last changed the setting |
+| created_at | TIMESTAMP | Yes | Created timestamp |
+| updated_at | TIMESTAMP | Yes | Last updated timestamp |
+
+`DEFAULT_PAGE_SIZE` is implemented in `v0.18.6` with allowed values `10`, `25`, `50`, and `100`.
+
 Notification types:
 
 - `ENGAGEMENT_INITIATED`
@@ -657,6 +671,8 @@ Cleanup removes only regression-prefixed application/calendar data and directly 
 Reset now restores baseline organizations, local demo users, seeded applications, seeded engagements, and scoping records.
 
 Schedule health is not stored in the database. In v0.18.5 it is derived at read time from engagement status, planned start date, and planned end date.
+
+Portal default page size is stored in `system_settings` from `v0.18.6`; reset restores the baseline value of `10`.
 
 Seeded applications:
 

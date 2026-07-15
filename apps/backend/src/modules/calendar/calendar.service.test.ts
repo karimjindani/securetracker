@@ -15,6 +15,25 @@ const actor: CurrentUser = {
 };
 
 describe('CalendarService', () => {
+  it('filters calendar entries by year and starting month', async () => {
+    const prisma = {
+      vaptEngagement: {
+        findMany: vi.fn().mockResolvedValue([])
+      }
+    };
+
+    await new CalendarService(prisma as never).list('2026', 'July');
+
+    expect(prisma.vaptEngagement.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          plannedYear: 2026,
+          plannedMonth: 'July'
+        }
+      })
+    );
+  });
+
   it('creates a planned engagement and audit entry', async () => {
     const engagement = { id: 'eng-1', title: 'Internet Banking VAPT', status: 'PLANNED' };
     const prisma = {
@@ -114,5 +133,9 @@ describe('CalendarService', () => {
         actor
       )
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects invalid calendar filter months', () => {
+    expect(() => new CalendarService({} as never).list('2026', 'NotAMonth')).toThrow(BadRequestException);
   });
 });

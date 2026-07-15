@@ -10,6 +10,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import PeopleIcon from '@mui/icons-material/People';
 import SecurityIcon from '@mui/icons-material/Security';
+import SettingsIcon from '@mui/icons-material/Settings';
 import TrackChangesIcon from '@mui/icons-material/TrackChanges';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -92,7 +93,7 @@ import {
   type Role
 } from '@securetracker/shared';
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist';
-import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthProvider.js';
 
@@ -100,6 +101,11 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).toString();
 
 type RecordStatus = 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
+
+interface PortalSettings {
+  defaultPageSize: number;
+  pageSizeOptions: number[];
+}
 
 interface ApplicationRecord {
   id: string;
@@ -434,7 +440,8 @@ const navigation = [
   { id: 'organizations', label: 'Organizations', path: '/organizations', icon: <BusinessIcon /> },
   { id: 'users', label: 'Users', path: '/users', icon: <PeopleIcon /> },
   { id: 'notifications', label: 'Notifications', path: '/notifications', icon: <NotificationsIcon /> },
-  { id: 'audit', label: 'Audit', path: '/audit', icon: <AdminPanelSettingsIcon /> }
+  { id: 'audit', label: 'Audit', path: '/audit', icon: <AdminPanelSettingsIcon /> },
+  { id: 'settings', label: 'Settings', path: '/settings', icon: <SettingsIcon /> }
 ];
 
 const engagementKanbanColumns: Array<{ id: string; title: string; statuses: EngagementStatus[] }> = [
@@ -450,10 +457,22 @@ const engagementKanbanColumns: Array<{ id: string; title: string; statuses: Enga
 
 const workflowPartyTypes = organizationTypes.filter((type) => type !== 'AUDITOR');
 
-const systemSettings = {
+const defaultPortalSettings: PortalSettings = {
   defaultPageSize: 10,
-  pageSizeOptions: [5, 10, 25, 50]
+  pageSizeOptions: [10, 25, 50, 100]
 };
+
+const SettingsContext = createContext<{
+  settings: PortalSettings;
+  setSettings: (settings: PortalSettings) => void;
+}>({
+  settings: defaultPortalSettings,
+  setSettings: () => undefined
+});
+
+function usePortalSettings() {
+  return useContext(SettingsContext).settings;
+}
 
 const monthOptions = [
   'January',
@@ -471,12 +490,18 @@ const monthOptions = [
 ];
 
 function usePagination<T>(rows: T[]) {
+  const settings = usePortalSettings();
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(systemSettings.defaultPageSize);
+  const [rowsPerPage, setRowsPerPage] = useState(settings.defaultPageSize);
 
   useEffect(() => {
     setPage(0);
   }, [rows]);
+
+  useEffect(() => {
+    setRowsPerPage(settings.defaultPageSize);
+    setPage(0);
+  }, [settings.defaultPageSize]);
 
   const paginatedRows = useMemo(
     () => rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
@@ -489,7 +514,7 @@ function usePagination<T>(rows: T[]) {
       count={rows.length}
       page={rows.length === 0 ? 0 : Math.min(page, Math.max(0, Math.ceil(rows.length / rowsPerPage) - 1))}
       rowsPerPage={rowsPerPage}
-      rowsPerPageOptions={systemSettings.pageSizeOptions}
+      rowsPerPageOptions={settings.pageSizeOptions}
       labelRowsPerPage="Default Page Size"
       onPageChange={(_event, nextPage) => setPage(nextPage)}
       onRowsPerPageChange={(event) => {
@@ -522,6 +547,7 @@ function ProtectedShell() {
   const auth = useAuth();
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [portalSettings, setPortalSettings] = useState<PortalSettings>(defaultPortalSettings);
 
   const refreshUnreadCount = async () => {
     if (auth.status !== 'authenticated') return;
@@ -536,6 +562,18 @@ function ProtectedShell() {
     void refreshUnreadCount();
   }, [auth.status === 'authenticated' ? auth.user.id : auth.status]);
 
+  const refreshSettings = async () => {
+    if (auth.status !== 'authenticated') return;
+    const response = await auth.apiFetch(`${apiBaseUrl}/settings`);
+    if (response.ok) {
+      setPortalSettings(await response.json());
+    }
+  };
+
+  useEffect(() => {
+    void refreshSettings();
+  }, [auth.status === 'authenticated' ? auth.user.id : auth.status]);
+
   if (auth.status === 'loading') {
     return <LoadingState />;
   }
@@ -547,7 +585,7 @@ function ProtectedShell() {
   const allowedNavigation = navigation.filter((item) => navigationByRole[auth.user.role].includes(item.id));
 
   return (
-    <>
+    <SettingsContext.Provider value={{ settings: portalSettings, setSettings: setPortalSettings }}>
       <AppBar position="static" color="primary" elevation={0}>
         <Toolbar>
           <SecurityIcon sx={{ mr: 1.5 }} />
@@ -607,11 +645,12 @@ function ProtectedShell() {
             <Route path="/users" element={<GuardedPage required="users" element={<UsersPage />} />} />
             <Route path="/notifications" element={<GuardedPage required="notifications" element={<NotificationsPage onChanged={refreshUnreadCount} />} />} />
             <Route path="/audit" element={<GuardedPage required="audit" element={<AuditPage />} />} />
+            <Route path="/settings" element={<GuardedPage required="settings" element={<SettingsPage />} />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Container>
       </Box>
-    </>
+    </SettingsContext.Provider>
   );
 }
 
@@ -638,7 +677,7 @@ function Dashboard() {
     <Stack spacing={3}>
       <Box>
         <Typography variant="h5">Security Dashboard</Typography>
-        <Typography color="text.secondary">Live schedule health, Kanban engagement, governance, findings, risk acceptance, and audit visibility for v0.18.5.</Typography>
+        <Typography color="text.secondary">Live schedule health, Kanban engagement, governance, findings, risk acceptance, audit visibility, and admin settings for v0.18.6.</Typography>
       </Box>
       {message && <Alert severity="error">{message}</Alert>}
       {!summary ? (
@@ -1265,6 +1304,7 @@ function CalendarPage() {
   const loadData = async () => {
     const calendarParams = new URLSearchParams();
     if (filters.year.trim()) calendarParams.set('year', filters.year.trim());
+    if (filters.startingMonth) calendarParams.set('startingMonth', filters.startingMonth);
     const [applicationsResponse, calendarResponse] = await Promise.all([
       apiFetch(`${apiBaseUrl}/applications`),
       apiFetch(`${apiBaseUrl}/calendar?${calendarParams.toString()}`)
@@ -1275,7 +1315,7 @@ function CalendarPage() {
 
   useEffect(() => {
     void loadData();
-  }, [filters.year]);
+  }, [filters.year, filters.startingMonth]);
 
   const submit = async () => {
     if (savingRef.current) return;
@@ -2318,6 +2358,7 @@ function AuditPage() {
   const [logs, setLogs] = useState<AuditLogRecord[]>([]);
   const [filters, setFilters] = useState({ action: '', entityType: '', dateFrom: '', dateTo: '' });
   const [message, setMessage] = useState('');
+  const { paginatedRows: paginatedLogs, pagination: auditPagination } = usePagination(logs);
 
   const load = async () => {
     const params = new URLSearchParams();
@@ -2382,22 +2423,44 @@ function AuditPage() {
           </Grid>
         </Grid>
       </Paper>
-      <Stack spacing={2}>
-        {logs.length === 0 && <Alert severity="info">No audit records match the current filters.</Alert>}
-        {logs.map((log) => (
-          <Paper key={log.id} variant="outlined" sx={{ p: 2 }}>
-            <Stack spacing={1}>
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                <Chip label={log.action} size="small" />
-                <Chip label={log.entityType} size="small" />
-                <Chip label={formatDate(log.createdAt)} size="small" />
-              </Stack>
-              <Typography variant="body2" color="text.secondary">User: {log.user?.email ?? 'System'}</Typography>
-              <Typography variant="body2" color="text.secondary">Entity: {log.entityId ?? 'Not applicable'}</Typography>
-            </Stack>
-          </Paper>
-        ))}
-      </Stack>
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
+        <Stack spacing={2}>
+          {auditPagination}
+          <TableContainer sx={{ overflowX: 'auto' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Timestamp</TableCell>
+                  <TableCell>User</TableCell>
+                  <TableCell>Action</TableCell>
+                  <TableCell>Entity Type</TableCell>
+                  <TableCell>Entity ID</TableCell>
+                  <TableCell>IP Address</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {paginatedLogs.map((log) => (
+                  <TableRow key={log.id} hover>
+                    <TableCell>{formatDate(log.createdAt)}</TableCell>
+                    <TableCell>{log.user?.email ?? 'System'}</TableCell>
+                    <TableCell>{log.action}</TableCell>
+                    <TableCell>{log.entityType}</TableCell>
+                    <TableCell>{log.entityId ?? 'Not applicable'}</TableCell>
+                    <TableCell>{log.ipAddress ?? 'Not captured'}</TableCell>
+                  </TableRow>
+                ))}
+                {logs.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6}>
+                      <Alert severity="info">No audit records match the current filters.</Alert>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Stack>
+      </Paper>
     </Stack>
   );
 }
@@ -2545,6 +2608,66 @@ function nextEngagementStatuses(status: EngagementStatus, role?: Role): Engageme
     if (target === 'APPRISE_ASSESSMENT') return role === 'SYSTEM_ADMIN' || role === 'PAYSYS_SECURITY_ADMIN' || role === 'VENDOR_ADMIN';
     return role === 'SYSTEM_ADMIN' || role === 'PAYSYS_SECURITY_ADMIN';
   });
+}
+
+function SettingsPage() {
+  const { apiFetch } = useAuth();
+  const { settings, setSettings } = useContext(SettingsContext);
+  const [defaultPageSize, setDefaultPageSize] = useState(settings.defaultPageSize);
+  const [message, setMessage] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setDefaultPageSize(settings.defaultPageSize);
+  }, [settings.defaultPageSize]);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const response = await apiFetch(`${apiBaseUrl}/settings`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ defaultPageSize })
+      });
+      if (!response.ok) {
+        setMessage('Settings could not be saved.');
+        return;
+      }
+      const updated = (await response.json()) as PortalSettings;
+      setSettings(updated);
+      setMessage('Settings saved.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Stack spacing={3}>
+      <PageTitle title="Settings" subtitle="System Admin controls for production-facing portal defaults." />
+      {message && <Alert severity={message.includes('could not') ? 'error' : 'success'}>{message}</Alert>}
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
+        <Stack spacing={2} maxWidth={420}>
+          <TextField
+            select
+            fullWidth
+            label="Default Page Size"
+            value={defaultPageSize}
+            onChange={(event) => setDefaultPageSize(Number(event.target.value))}
+            helperText="Used by table pagination across list-heavy pages."
+          >
+            {settings.pageSizeOptions.map((value) => (
+              <MenuItem key={value} value={value}>
+                {value} records
+              </MenuItem>
+            ))}
+          </TextField>
+          <Button variant="contained" onClick={save} disabled={saving || defaultPageSize === settings.defaultPageSize}>
+            {saving ? 'Saving...' : 'Save settings'}
+          </Button>
+        </Stack>
+      </Paper>
+    </Stack>
+  );
 }
 
 function GuardedPage({ required, element }: { required: string; element: ReactElement }) {

@@ -438,3 +438,13 @@ model Notification {
   @@index([entityType, entityId])
   @@index([createdAt])
 }
+
+model SystemSetting {
+  key         String   @id @db.VarChar(80)
+  value       String   @db.VarChar(255)
+  updatedById String?  @db.Uuid
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@index([updatedAt])
+}

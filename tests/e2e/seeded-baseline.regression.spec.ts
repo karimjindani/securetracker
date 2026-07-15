@@ -41,6 +41,13 @@ test('seeded validation baseline exposes organizations, users, applications, cal
   const seededApplications = applications.filter((application) => application.name.startsWith('Seeded '));
   expect(seededApplications).toHaveLength(25);
 
+  const settingsResponse = await systemApi.get('/settings');
+  expect(settingsResponse.ok(), await settingsResponse.text()).toBe(true);
+  expect(await settingsResponse.json()).toEqual(expect.objectContaining({
+    defaultPageSize: 10,
+    pageSizeOptions: [10, 25, 50, 100]
+  }));
+
   const calendarResponse = await systemApi.get(`/calendar?year=${currentYear}`);
   expect(calendarResponse.ok(), await calendarResponse.text()).toBe(true);
   const calendar = (await calendarResponse.json()) as Array<{
@@ -53,6 +60,12 @@ test('seeded validation baseline exposes organizations, users, applications, cal
   const seededWhitebox = calendar.filter((entry) => entry.application.name.startsWith('Seeded ') && entry.assessmentType === 'WHITEBOX');
   expect(seededWhitebox).toHaveLength(50);
   expect(seededWhitebox.some((entry) => entry.status !== 'PLANNED')).toBe(true);
+
+  const januaryCalendarResponse = await systemApi.get(`/calendar?year=${currentYear}&startingMonth=January`);
+  expect(januaryCalendarResponse.ok(), await januaryCalendarResponse.text()).toBe(true);
+  const januaryCalendar = (await januaryCalendarResponse.json()) as Array<{ plannedMonth?: string }>;
+  expect(januaryCalendar.length).toBeGreaterThan(0);
+  expect(januaryCalendar.every((entry) => entry.plannedMonth === 'January')).toBe(true);
 
   for (const application of seededApplications) {
     const entries = seededWhitebox
