@@ -47,6 +47,7 @@ npm.cmd run ops
 - Seeded baseline restores 3 organizations, 7 users, 25 applications, and 50 annual Whitebox engagements.
 - Each seeded application has two Whitebox engagements spaced six months apart.
 - Engagements render as lifecycle Kanban data across planned, active, review, closed, and Go-Live states.
+- Dashboard and Engagements expose derived schedule-health states for On Track, Needs Attention, and At Risk work.
 
 ## Future Coverage Placeholders
 

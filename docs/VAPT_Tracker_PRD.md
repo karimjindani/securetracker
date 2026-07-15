@@ -17,6 +17,9 @@ Notifications are implemented as in-app records with unread counts, mark-read ac
 ### v0.18.4 Implementation Note
 The seeded validation baseline now restores 3 workflow-party organizations, 7 demo users, 25 applications, and 50 annual Whitebox engagements. Engagements render as a Kanban board grouped by lifecycle stage.
 
+### v0.18.5 Implementation Note
+Dashboard schedule health now classifies planned and active engagements as On Track, Needs Attention, or At Risk based on planned dates and lifecycle status. Dashboard drill-down links open the Engagements Kanban with the matching schedule-health filter.
+
 ---
 
 # Business Objectives

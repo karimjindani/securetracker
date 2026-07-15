@@ -656,6 +656,8 @@ Cleanup removes only regression-prefixed application/calendar data and directly 
 
 Reset now restores baseline organizations, local demo users, seeded applications, seeded engagements, and scoping records.
 
+Schedule health is not stored in the database. In v0.18.5 it is derived at read time from engagement status, planned start date, and planned end date.
+
 Seeded applications:
 
 - `Seeded Core Banking Portal`
