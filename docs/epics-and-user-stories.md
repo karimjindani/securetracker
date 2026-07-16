@@ -1073,6 +1073,24 @@ Not implemented in v0.18.6:
 
 ---
 
+# v0.18.7 Implementation Status
+
+Implemented:
+
+- Epic 16 operational settings for schedule-health, notifications, scheduler enablement, and audit retention target.
+- Settings-driven schedule-health warning window.
+- Settings-driven notification reminder and risk expiry windows.
+- Settings-driven notification email enablement.
+- Local backend scheduler controlled by System Settings.
+
+Not implemented in v0.18.7:
+
+- Reference data administration.
+- Queue-backed/distributed production scheduling.
+- Full production deployment hardening.
+
+---
+
 # Phase 2 Scope
 
 Epic 10 – Remediation Evidence

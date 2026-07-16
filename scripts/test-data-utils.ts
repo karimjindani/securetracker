@@ -182,13 +182,25 @@ export async function seedBaselineData(prisma = new PrismaClient()) {
 }
 
 export async function seedBaselineSettings(prisma = new PrismaClient()) {
-  await prisma.systemSetting.upsert({
-    where: { key: 'DEFAULT_PAGE_SIZE' },
-    update: { value: '10', updatedById: undefined },
-    create: { key: 'DEFAULT_PAGE_SIZE', value: '10' }
-  });
+  const settings = [
+    ['DEFAULT_PAGE_SIZE', '10'],
+    ['SCHEDULE_HEALTH_WARNING_DAYS', '7'],
+    ['NOTIFICATION_REMINDER_DAYS', '7'],
+    ['RISK_ACCEPTANCE_EXPIRY_REMINDER_DAYS', '14'],
+    ['NOTIFICATIONS_EMAIL_ENABLED', 'true'],
+    ['NOTIFICATIONS_SCHEDULER_ENABLED', 'false'],
+    ['AUDIT_RETENTION_DAYS', '365']
+  ] as const;
 
-  return 1;
+  for (const [key, value] of settings) {
+    await prisma.systemSetting.upsert({
+      where: { key },
+      update: { value, updatedById: undefined },
+      create: { key, value }
+    });
+  }
+
+  return settings.length;
 }
 
 export async function seedBaselineOrganizations(prisma = new PrismaClient()) {

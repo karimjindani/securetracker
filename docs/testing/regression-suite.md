@@ -43,6 +43,7 @@ npm.cmd run ops
 - Applications, VAPT Calendar, Engagements, Organizations, and Users render list data in tables.
 - List page filters update visible table rows while Dashboard remains metric-card based.
 - Default Page Size is loaded from System Settings and can be updated only by System Admin.
+- Schedule-health, notification reminder, risk expiry reminder, email, scheduler, and audit retention settings are restored by reset and writable only by System Admin.
 - Calendar filters include Year and Starting Month.
 - Duplicate planned Calendar submissions return the existing engagement.
 - Audit search results render in the paginated table pattern.
@@ -51,11 +52,11 @@ npm.cmd run ops
 - Seeded baseline restores 3 organizations, 7 users, 25 applications, and 50 annual Whitebox engagements.
 - Each seeded application has two Whitebox engagements spaced six months apart.
 - Engagements render as lifecycle Kanban data across planned, active, review, closed, and Go-Live states.
-- Dashboard and Engagements expose derived schedule-health states for On Track, Needs Attention, and At Risk work.
+- Dashboard and Engagements expose derived schedule-health states for On Track, Needs Attention, and At Risk work using the configured warning window.
 
 ## Future Coverage Placeholders
 
-Pending specs remain for reference data administration and deeper production notification scheduling.
+Pending specs remain for reference data administration and queue-backed production notification scheduling.
 
 ## Data Safety
 

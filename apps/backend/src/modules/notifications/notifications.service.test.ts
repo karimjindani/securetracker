@@ -22,15 +22,19 @@ const developer = {
   status: 'ACTIVE'
 };
 
-const makeService = (prisma: object) =>
+const defaultSettings = {
+  notificationReminderDays: 7,
+  riskAcceptanceExpiryReminderDays: 14,
+  notificationsEmailEnabled: false,
+  notificationsSchedulerEnabled: false
+};
+
+const makeService = (prisma: object, settings = defaultSettings) =>
   new NotificationsService(prisma as never, {
     get: vi.fn((key: string) => {
-      if (key === 'NOTIFICATIONS_EMAIL_ENABLED') return 'false';
-      if (key === 'NOTIFICATION_REMINDER_DAYS') return '7';
-      if (key === 'RISK_ACCEPTANCE_EXPIRY_REMINDER_DAYS') return '14';
       return undefined;
     })
-  } as never);
+  } as never, { list: vi.fn().mockResolvedValue(settings) } as never);
 
 describe('NotificationsService', () => {
   it('creates an assignment notification for the assigned developer', async () => {
@@ -135,5 +139,41 @@ describe('NotificationsService', () => {
         data: expect.objectContaining({ notificationType: 'FINDING_DUE_REMINDER' })
       })
     );
+  });
+
+  it('skips scheduled due checks when the scheduler setting is disabled', async () => {
+    const prisma = {};
+
+    await expect(makeService(prisma).runScheduledDueChecks()).resolves.toEqual({
+      skipped: true,
+      reason: 'scheduler-disabled'
+    });
+  });
+
+  it('does not send email when notification email setting is disabled', async () => {
+    const prisma = {
+      finding: {
+        findUniqueOrThrow: vi.fn().mockResolvedValue({
+          id: 'finding-1',
+          findingReference: 'F-001',
+          title: 'Missing authorization',
+          assignedTo: developer,
+          engagement: { application: { name: 'Payments Portal' } }
+        })
+      },
+      notification: {
+        create: vi.fn().mockResolvedValue({ id: 'notification-1' })
+      },
+      auditLog: {
+        create: vi.fn().mockResolvedValue({})
+      },
+      user: {
+        findUniqueOrThrow: vi.fn()
+      }
+    };
+
+    await makeService(prisma).notifyFindingAssigned('finding-1', actor);
+
+    expect(prisma.user.findUniqueOrThrow).not.toHaveBeenCalled();
   });
 });

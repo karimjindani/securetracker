@@ -27,6 +27,10 @@ const notifications = {
   notifyEngagementStatus: vi.fn().mockResolvedValue(undefined)
 };
 
+const settings = {
+  list: vi.fn().mockResolvedValue({ scheduleHealthWarningDays: 7 })
+};
+
 describe('EngagementsService', () => {
   it('adds schedule health and filters engagement lists by derived risk state', async () => {
     const prisma = {
@@ -50,7 +54,7 @@ describe('EngagementsService', () => {
       }
     };
 
-    const result = await new EngagementsService(prisma as never, notifications as never).list({ scheduleHealth: 'RED' });
+    const result = await new EngagementsService(prisma as never, notifications as never, settings as never).list({ scheduleHealth: 'RED' });
 
     expect(result).toEqual([
       expect.objectContaining({
@@ -60,10 +64,34 @@ describe('EngagementsService', () => {
     ]);
   });
 
+  it('uses the configured schedule-health warning window', async () => {
+    const prisma = {
+      vaptEngagement: {
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: 'soon-1',
+            title: 'Soon VAPT',
+            status: 'PLANNED',
+            plannedStartDate: new Date('2026-08-01T00:00:00Z'),
+            plannedEndDate: new Date('2026-08-05T00:00:00Z')
+          }
+        ])
+      }
+    };
+    const wideWarning = { list: vi.fn().mockResolvedValue({ scheduleHealthWarningDays: 30 }) };
+
+    const result = await new EngagementsService(prisma as never, notifications as never, wideWarning as never).list({
+      scheduleHealth: 'YELLOW'
+    });
+
+    expect(result).toEqual([expect.objectContaining({ id: 'soon-1', scheduleHealth: 'YELLOW' })]);
+  });
+
+
   it('rejects invalid schedule health filters', async () => {
-    expect(() => new EngagementsService({} as never, notifications as never).list({ scheduleHealth: 'BLUE' })).toThrow(
-      BadRequestException
-    );
+    await expect(
+      new EngagementsService({} as never, notifications as never, settings as never).list({ scheduleHealth: 'BLUE' })
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('blocks non-NBP users from closing an engagement', async () => {
@@ -79,7 +107,7 @@ describe('EngagementsService', () => {
     };
 
     await expect(
-      new EngagementsService(prisma as never, notifications as never).transition(
+      new EngagementsService(prisma as never, notifications as never, settings as never).transition(
         'eng-1',
         { targetStatus: 'CLOSED', remarks: 'Closing meeting complete' },
         paysysActor
@@ -100,7 +128,7 @@ describe('EngagementsService', () => {
       }
     };
 
-    const result = await new EngagementsService(prisma as never, notifications as never).transition(
+    const result = await new EngagementsService(prisma as never, notifications as never, settings as never).transition(
       'eng-1',
       { targetStatus: 'CLOSED', remarks: 'Closing meeting complete' },
       nbpActor
@@ -138,7 +166,7 @@ describe('EngagementsService', () => {
       }
     };
 
-    const result = await new EngagementsService(prisma as never, notifications as never).finalizeScopingRecord('scope-1', paysysActor);
+    const result = await new EngagementsService(prisma as never, notifications as never, settings as never).finalizeScopingRecord('scope-1', paysysActor);
 
     expect(result).toBe(after);
     expect(prisma.scopingRecord.update).toHaveBeenCalledWith(

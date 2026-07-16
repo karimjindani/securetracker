@@ -45,7 +45,13 @@ test('seeded validation baseline exposes organizations, users, applications, cal
   expect(settingsResponse.ok(), await settingsResponse.text()).toBe(true);
   expect(await settingsResponse.json()).toEqual(expect.objectContaining({
     defaultPageSize: 10,
-    pageSizeOptions: [10, 25, 50, 100]
+    pageSizeOptions: [10, 25, 50, 100],
+    scheduleHealthWarningDays: 7,
+    notificationReminderDays: 7,
+    riskAcceptanceExpiryReminderDays: 14,
+    notificationsEmailEnabled: true,
+    notificationsSchedulerEnabled: false,
+    auditRetentionDays: 365
   }));
 
   const calendarResponse = await systemApi.get(`/calendar?year=${currentYear}`);

@@ -34,15 +34,39 @@ test('system settings are visible to authenticated users and writable only by Sy
   expect(settings.ok(), await settings.text()).toBe(true);
   expect(await settings.json()).toEqual(expect.objectContaining({
     defaultPageSize: expect.any(Number),
-    pageSizeOptions: expect.arrayContaining([10, 25, 50, 100])
+    pageSizeOptions: expect.arrayContaining([10, 25, 50, 100]),
+    scheduleHealthWarningDays: 7,
+    notificationReminderDays: 7,
+    riskAcceptanceExpiryReminderDays: 14,
+    notificationsEmailEnabled: true,
+    notificationsSchedulerEnabled: false,
+    auditRetentionDays: 365
   }));
 
   const forbiddenUpdate = await auditorApi.patch('/settings', { data: { defaultPageSize: 25 } });
   expect(forbiddenUpdate.status()).toBe(403);
 
-  const update = await systemApi.patch('/settings', { data: { defaultPageSize: 25 } });
+  const update = await systemApi.patch('/settings', {
+    data: {
+      defaultPageSize: 10,
+      scheduleHealthWarningDays: 7,
+      notificationReminderDays: 7,
+      riskAcceptanceExpiryReminderDays: 14,
+      notificationsEmailEnabled: true,
+      notificationsSchedulerEnabled: false,
+      auditRetentionDays: 365
+    }
+  });
   expect(update.ok(), await update.text()).toBe(true);
-  expect(await update.json()).toEqual(expect.objectContaining({ defaultPageSize: 25 }));
+  expect(await update.json()).toEqual(expect.objectContaining({
+    defaultPageSize: 10,
+    scheduleHealthWarningDays: 7,
+    notificationReminderDays: 7,
+    riskAcceptanceExpiryReminderDays: 14,
+    notificationsEmailEnabled: true,
+    notificationsSchedulerEnabled: false,
+    auditRetentionDays: 365
+  }));
 
   const invalidUpdate = await systemApi.patch('/settings', { data: { defaultPageSize: 7 } });
   expect(invalidUpdate.status()).toBe(400);

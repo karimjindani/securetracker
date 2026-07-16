@@ -105,6 +105,12 @@ type RecordStatus = 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
 interface PortalSettings {
   defaultPageSize: number;
   pageSizeOptions: number[];
+  scheduleHealthWarningDays: number;
+  notificationReminderDays: number;
+  riskAcceptanceExpiryReminderDays: number;
+  notificationsEmailEnabled: boolean;
+  notificationsSchedulerEnabled: boolean;
+  auditRetentionDays: number;
 }
 
 interface ApplicationRecord {
@@ -459,7 +465,13 @@ const workflowPartyTypes = organizationTypes.filter((type) => type !== 'AUDITOR'
 
 const defaultPortalSettings: PortalSettings = {
   defaultPageSize: 10,
-  pageSizeOptions: [10, 25, 50, 100]
+  pageSizeOptions: [10, 25, 50, 100],
+  scheduleHealthWarningDays: 7,
+  notificationReminderDays: 7,
+  riskAcceptanceExpiryReminderDays: 14,
+  notificationsEmailEnabled: true,
+  notificationsSchedulerEnabled: false,
+  auditRetentionDays: 365
 };
 
 const SettingsContext = createContext<{
@@ -677,7 +689,7 @@ function Dashboard() {
     <Stack spacing={3}>
       <Box>
         <Typography variant="h5">Security Dashboard</Typography>
-        <Typography color="text.secondary">Live schedule health, Kanban engagement, governance, findings, risk acceptance, audit visibility, and admin settings for v0.18.6.</Typography>
+        <Typography color="text.secondary">Live schedule health, Kanban engagement, governance, findings, risk acceptance, audit visibility, and admin settings for v0.18.7.</Typography>
       </Box>
       {message && <Alert severity="error">{message}</Alert>}
       {!summary ? (
@@ -2613,13 +2625,13 @@ function nextEngagementStatuses(status: EngagementStatus, role?: Role): Engageme
 function SettingsPage() {
   const { apiFetch } = useAuth();
   const { settings, setSettings } = useContext(SettingsContext);
-  const [defaultPageSize, setDefaultPageSize] = useState(settings.defaultPageSize);
+  const [form, setForm] = useState(settings);
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setDefaultPageSize(settings.defaultPageSize);
-  }, [settings.defaultPageSize]);
+    setForm(settings);
+  }, [settings]);
 
   const save = async () => {
     setSaving(true);
@@ -2627,10 +2639,19 @@ function SettingsPage() {
       const response = await apiFetch(`${apiBaseUrl}/settings`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ defaultPageSize })
+        body: JSON.stringify({
+          defaultPageSize: form.defaultPageSize,
+          scheduleHealthWarningDays: form.scheduleHealthWarningDays,
+          notificationReminderDays: form.notificationReminderDays,
+          riskAcceptanceExpiryReminderDays: form.riskAcceptanceExpiryReminderDays,
+          notificationsEmailEnabled: form.notificationsEmailEnabled,
+          notificationsSchedulerEnabled: form.notificationsSchedulerEnabled,
+          auditRetentionDays: form.auditRetentionDays
+        })
       });
       if (!response.ok) {
-        setMessage('Settings could not be saved.');
+        const body = await response.text();
+        setMessage(body || 'Settings could not be saved.');
         return;
       }
       const updated = (await response.json()) as PortalSettings;
@@ -2643,30 +2664,95 @@ function SettingsPage() {
 
   return (
     <Stack spacing={3}>
-      <PageTitle title="Settings" subtitle="System Admin controls for production-facing portal defaults." />
+      <PageTitle title="Settings" subtitle="System Admin controls for production-facing portal defaults and operational windows." />
       {message && <Alert severity={message.includes('could not') ? 'error' : 'success'}>{message}</Alert>}
-      <Paper variant="outlined" sx={{ p: 2.5 }}>
-        <Stack spacing={2} maxWidth={420}>
-          <TextField
-            select
-            fullWidth
-            label="Default Page Size"
-            value={defaultPageSize}
-            onChange={(event) => setDefaultPageSize(Number(event.target.value))}
-            helperText="Used by table pagination across list-heavy pages."
-          >
-            {settings.pageSizeOptions.map((value) => (
-              <MenuItem key={value} value={value}>
-                {value} records
-              </MenuItem>
-            ))}
-          </TextField>
-          <Button variant="contained" onClick={save} disabled={saving || defaultPageSize === settings.defaultPageSize}>
-            {saving ? 'Saving...' : 'Save settings'}
-          </Button>
-        </Stack>
-      </Paper>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <SettingsSection title="Portal Defaults">
+            <TextField
+              select
+              fullWidth
+              label="Default Page Size"
+              value={form.defaultPageSize}
+              onChange={(event) => setForm({ ...form, defaultPageSize: Number(event.target.value) })}
+              helperText="Used by table pagination across list-heavy pages."
+            >
+              {settings.pageSizeOptions.map((value) => (
+                <MenuItem key={value} value={value}>
+                  {value} records
+                </MenuItem>
+              ))}
+            </TextField>
+          </SettingsSection>
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <SettingsSection title="Schedule Health">
+            <TextField
+              fullWidth
+              type="number"
+              label="Warning Window Days"
+              value={form.scheduleHealthWarningDays}
+              onChange={(event) => setForm({ ...form, scheduleHealthWarningDays: Number(event.target.value) })}
+              helperText="1-30 days before planned start/end turns schedule health yellow."
+            />
+          </SettingsSection>
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <SettingsSection title="Notifications">
+            <TextField
+              fullWidth
+              type="number"
+              label="Finding Reminder Days"
+              value={form.notificationReminderDays}
+              onChange={(event) => setForm({ ...form, notificationReminderDays: Number(event.target.value) })}
+              helperText="1-60 day reminder window for assigned findings."
+            />
+            <TextField
+              fullWidth
+              type="number"
+              label="Risk Expiry Reminder Days"
+              value={form.riskAcceptanceExpiryReminderDays}
+              onChange={(event) => setForm({ ...form, riskAcceptanceExpiryReminderDays: Number(event.target.value) })}
+              helperText="1-90 day reminder window for accepted risk expiry."
+            />
+            <FormControlLabel
+              control={<Switch checked={form.notificationsEmailEnabled} onChange={(event) => setForm({ ...form, notificationsEmailEnabled: event.target.checked })} />}
+              label="Email notifications enabled"
+            />
+            <FormControlLabel
+              control={<Switch checked={form.notificationsSchedulerEnabled} onChange={(event) => setForm({ ...form, notificationsSchedulerEnabled: event.target.checked })} />}
+              label="Scheduled due checks enabled"
+            />
+          </SettingsSection>
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <SettingsSection title="Audit and Retention">
+            <TextField
+              fullWidth
+              type="number"
+              label="Audit Retention Days"
+              value={form.auditRetentionDays}
+              onChange={(event) => setForm({ ...form, auditRetentionDays: Number(event.target.value) })}
+              helperText="30-3650 day retention target for audit/export planning."
+            />
+          </SettingsSection>
+        </Grid>
+      </Grid>
+      <Button variant="contained" onClick={save} disabled={saving}>
+        {saving ? 'Saving...' : 'Save settings'}
+      </Button>
     </Stack>
+  );
+}
+
+function SettingsSection({ title, children }: { title: string; children: ReactElement | ReactElement[] }) {
+  return (
+    <Paper variant="outlined" sx={{ p: 2.5, height: '100%' }}>
+      <Stack spacing={2}>
+        <Typography variant="h6">{title}</Typography>
+        {children}
+      </Stack>
+    </Paper>
   );
 }
 

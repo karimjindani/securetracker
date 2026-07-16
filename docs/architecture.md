@@ -788,6 +788,13 @@ Implemented in v0.18.6:
 - Audit search results use the same paginated table pattern as other list-heavy pages.
 - Calendar list APIs accept `year` and `startingMonth` filters.
 
+Implemented in v0.18.7:
+
+- System Settings now controls schedule-health warning days, notification reminder windows, risk expiry reminders, email enablement, scheduler enablement, and audit retention target.
+- Dashboard and Engagements use the configured schedule-health warning window.
+- Notification due checks use configured reminder windows and email enablement.
+- A local backend scheduler periodically checks whether scheduled due checks are enabled before running.
+
 ### Application Heatmap
 
 - Application-wise critical/high/medium/low findings
@@ -1094,3 +1101,7 @@ List-heavy portal pages use responsive tables for Applications, VAPT Calendar, E
 ## v0.18.6 Settings Note
 
 Default Page Size is now a global portal setting. It is read through `GET /settings`, updated through `PATCH /settings` by `SYSTEM_ADMIN`, and applied by frontend table pagination.
+
+## v0.18.7 Configuration Note
+
+Settings are global portal configuration records. Database settings are authoritative after seeded reset; notification-related environment variables remain fallback values before settings are seeded.
