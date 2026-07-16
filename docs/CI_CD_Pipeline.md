@@ -12,6 +12,11 @@ npm run typecheck
 npm run lint
 npm test
 npm run build
+npm audit --audit-level=high
+docker compose config --quiet
+docker compose -f docker-compose.prod.yml config --quiet
+docker build --target backend
+docker build --target frontend
 ```
 
 ## Regression Gate
@@ -23,7 +28,7 @@ npm run test:e2e
 npm run test:regression
 ```
 
-These are documented local gates for now. They should be added to CI once ephemeral PostgreSQL, Keycloak, MinIO, SMTP, backend, and frontend services are provisioned inside the workflow.
+These remain local/dev gates until ephemeral PostgreSQL, Keycloak, MinIO, SMTP, backend, and frontend services are provisioned inside the workflow.
 
 Starting in `v0.4.0`, regression also covers engagement initiation, scoping finalization, NBP-only closure, and Paysys Go-Live transition checks.
 
@@ -35,15 +40,15 @@ Starting in `v0.11.3`, regression also covers Organizations/Users data visibilit
 
 ## Security Scanning
 
-Security scanning is targeted for a later hardening baseline:
+Starting in `v0.18.8`, CI includes:
 
-- Dependency scan
-- Secret scan
-- SAST scan
-- Container image scan
+- Dependency audit with `npm audit --audit-level=high`.
+- Gitleaks secret scanning.
+- Backend and frontend Docker image builds.
+- A non-blocking Trivy scan for the backend image.
 
-Until then, the local lint step blocks obvious secret logging patterns.
+The lint step continues to block obvious secret logging patterns.
 
 ## CD Target
 
-Production deployment is not implemented in `v0.1.0`. Future image publishing should tag images with both version and git SHA.
+The `v0.18.8` deployment target is a Docker VM pilot using `docker-compose.prod.yml`. Future image publishing should tag images with both version and git SHA.

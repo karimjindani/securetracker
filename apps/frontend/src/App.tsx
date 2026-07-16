@@ -689,7 +689,7 @@ function Dashboard() {
     <Stack spacing={3}>
       <Box>
         <Typography variant="h5">Security Dashboard</Typography>
-        <Typography color="text.secondary">Live schedule health, Kanban engagement, governance, findings, risk acceptance, audit visibility, and admin settings for v0.18.7.</Typography>
+        <Typography color="text.secondary">Live schedule health, Kanban engagement, governance, findings, risk acceptance, audit visibility, admin settings, and production hardening for v0.18.8.</Typography>
       </Box>
       {message && <Alert severity="error">{message}</Alert>}
       {!summary ? (

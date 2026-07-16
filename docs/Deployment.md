@@ -154,3 +154,20 @@ Local defaults:
 - Audit retention target: `365`
 
 The notification-related environment variables in `.env.example` remain startup fallbacks. After seeded reset, database settings are authoritative for portal behavior.
+
+# v0.18.8 Production Docker VM Pilot
+
+Production pilot deployment uses:
+
+```powershell
+Copy-Item .env.production.example .env.production
+docker compose -f docker-compose.prod.yml config --quiet
+docker compose -f docker-compose.prod.yml build
+docker compose -f docker-compose.prod.yml up -d
+```
+
+Replace all placeholder secrets and URLs in `.env.production` before deployment. Production mode is enabled with `SECURETRACKER_DEPLOYMENT_MODE=production`; when enabled, the backend fails startup if required database, OIDC, MinIO, SMTP, or frontend origin values are missing.
+
+Production Compose intentionally excludes local Keycloak, Mailpit, and the external Ops Console. Authentication must point to the external NBP/client OIDC provider, email must point to the production SMTP relay, and TLS should be terminated by the VM reverse proxy.
+
+Persistent data lives in PostgreSQL and MinIO volumes. Use `docs/Backup_Restore_Runbook.md` before upgrades or disaster-recovery drills.

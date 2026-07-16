@@ -26,6 +26,9 @@ System Admin users can manage the global Default Page Size setting. List-heavy p
 ### v0.18.7 Implementation Note
 System Admin users can manage operational settings for schedule-health warning days, notification reminder windows, risk acceptance expiry reminders, email enablement, scheduler enablement, and audit retention targets. Dashboard, Engagements, and Notifications consume these settings instead of fixed code-only values.
 
+### v0.18.8 Implementation Note
+The application now includes Docker VM production pilot assets, production environment validation, CI security gates, and backup/restore documentation. Production authentication and SMTP are expected to be external services, while local Keycloak and Mailpit remain development-only services.
+
 ---
 
 # Business Objectives

@@ -398,3 +398,32 @@ Code reference:
 
 - Branch: `codex/v0.18.7-system-configuration`
 - Version: `0.18.7`
+
+## v0.18.8 - CI, Security, and Production Deployment Hardening
+
+Status: Implemented on feature branch
+
+Version allocation:
+
+- `AGENTS.md` required remote version inspection before assigning the code version.
+- `origin/main` was fetched with prune, active remote branches were inspected, and the highest remote version found was `v0.18.7`.
+- This slice therefore uses `v0.18.8`.
+
+Baseline contents:
+
+- Production Docker VM assets with `docker-compose.prod.yml` and `.env.production.example`.
+- Explicit production environment validation through `SECURETRACKER_DEPLOYMENT_MODE=production`.
+- CI dependency audit, secret scan, Docker image builds, production Compose validation, and non-blocking container scan.
+- Backup and restore runbook for PostgreSQL, MinIO, and host-managed configuration.
+
+Documentation references:
+
+- `docs/plans/v0.18.8-production-hardening-plan.md`
+- `docs/testing/v0.18.8-test-results.md`
+- `docs/user-guides/v0.18.8-production-operations-guide.md`
+- `docs/Backup_Restore_Runbook.md`
+
+Code reference:
+
+- Branch: `codex/v0.18.8-production-hardening`
+- Version: `0.18.8`
