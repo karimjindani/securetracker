@@ -1,13 +1,18 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { computeScheduleHealth, type ScheduleHealth } from '@securetracker/shared';
 import { PrismaService } from '../database/prisma.service.js';
+import { SettingsService } from '../settings/settings.service.js';
 
 @Injectable()
 export class DashboardService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(SettingsService) private readonly settingsService: SettingsService
+  ) {}
 
   async summary() {
     const now = new Date();
+    const settings = await this.settingsService.list();
     const inProgressStatuses = [
       'PAYSYS_APPRISE_INITIATED',
       'APPRISE_ASSESSMENT',
@@ -81,7 +86,13 @@ export class DashboardService {
         plannedMonth: engagement.plannedMonth,
         plannedYear: engagement.plannedYear,
         status: engagement.status,
-        scheduleHealth: computeScheduleHealth(engagement.status, engagement.plannedStartDate, engagement.plannedEndDate),
+        scheduleHealth: computeScheduleHealth(
+          engagement.status,
+          engagement.plannedStartDate,
+          engagement.plannedEndDate,
+          now,
+          settings.scheduleHealthWarningDays
+        ),
         applicationName: engagement.application.name,
         vendorName: engagement.vendorOrganization?.name
       }))

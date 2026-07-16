@@ -367,3 +367,34 @@ Code reference:
 
 - Branch: `codex/v0.18.6-ux-stabilization`
 - Version: `0.18.6`
+
+## v0.18.7 - System Administration and Configuration
+
+Status: Implemented on feature branch
+
+Version allocation:
+
+- `AGENTS.md` required remote version inspection before assigning the code version.
+- `origin/main` was fetched with prune, active remote branches were inspected, and the highest remote version found was `v0.18.6`.
+- This slice therefore uses `v0.18.7`.
+
+Baseline contents:
+
+- System Settings now includes schedule-health, notification, scheduler, and audit retention settings.
+- Dashboard and Engagements schedule health use the configured warning window.
+- Notification due checks use configured finding and risk reminder windows.
+- Notification email delivery can be enabled or disabled from Settings.
+- Backend scheduled due checks are controlled by `notificationsSchedulerEnabled`.
+- Settings page is grouped into Portal Defaults, Schedule Health, Notifications, and Audit and Retention.
+
+Documentation references:
+
+- `docs/plans/v0.18.7-system-configuration-plan.md`
+- `docs/testing/v0.18.7-test-results.md`
+- `docs/user-guides/v0.18.7-system-configuration-user-guide.md`
+- `docs/testing/regression-suite.md`
+
+Code reference:
+
+- Branch: `codex/v0.18.7-system-configuration`
+- Version: `0.18.7`

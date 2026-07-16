@@ -23,6 +23,9 @@ Dashboard schedule health now classifies planned and active engagements as On Tr
 ### v0.18.6 Implementation Note
 System Admin users can manage the global Default Page Size setting. List-heavy pages use that setting for pagination, Audit search now renders as a paginated table, and VAPT Calendar supports server-side filtering by Year and Starting Month while preserving duplicate-create protection.
 
+### v0.18.7 Implementation Note
+System Admin users can manage operational settings for schedule-health warning days, notification reminder windows, risk acceptance expiry reminders, email enablement, scheduler enablement, and audit retention targets. Dashboard, Engagements, and Notifications consume these settings instead of fixed code-only values.
+
 ---
 
 # Business Objectives

@@ -591,6 +591,15 @@ Stores global portal settings used by the application UI and operations.
 
 `DEFAULT_PAGE_SIZE` is implemented in `v0.18.6` with allowed values `10`, `25`, `50`, and `100`.
 
+`v0.18.7` adds these setting keys:
+
+- `SCHEDULE_HEALTH_WARNING_DAYS`
+- `NOTIFICATION_REMINDER_DAYS`
+- `RISK_ACCEPTANCE_EXPIRY_REMINDER_DAYS`
+- `NOTIFICATIONS_EMAIL_ENABLED`
+- `NOTIFICATIONS_SCHEDULER_ENABLED`
+- `AUDIT_RETENTION_DAYS`
+
 Notification types:
 
 - `ENGAGEMENT_INITIATED`
@@ -672,7 +681,7 @@ Reset now restores baseline organizations, local demo users, seeded applications
 
 Schedule health is not stored in the database. In v0.18.5 it is derived at read time from engagement status, planned start date, and planned end date.
 
-Portal default page size is stored in `system_settings` from `v0.18.6`; reset restores the baseline value of `10`.
+Portal settings are stored in `system_settings`; reset restores the baseline values documented in the current user guide.
 
 Seeded applications:
 

@@ -1,9 +1,10 @@
-import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, NotFoundException, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { NotificationType, Prisma, User } from '@prisma/client';
 import nodemailer from 'nodemailer';
 import type { CurrentUser } from '../auth/current-user.types.js';
 import { PrismaService } from '../database/prisma.service.js';
+import { SettingsService } from '../settings/settings.service.js';
 
 interface NotificationInput {
   userId: string;
@@ -25,22 +26,32 @@ const activeFindingStatuses = [
 ] as const;
 
 @Injectable()
-export class NotificationsService {
+export class NotificationsService implements OnModuleInit, OnModuleDestroy {
   private readonly fromAddress: string;
-  private readonly emailEnabled: boolean;
   private readonly transporter: nodemailer.Transporter;
+  private scheduler?: NodeJS.Timeout;
 
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
-    @Inject(ConfigService) private readonly config: ConfigService
+    @Inject(ConfigService) private readonly config: ConfigService,
+    @Inject(SettingsService) private readonly settingsService: SettingsService
   ) {
     this.fromAddress = this.config.get<string>('SMTP_FROM') ?? 'SecureTracker <securetracker@example.local>';
-    this.emailEnabled = (this.config.get<string>('NOTIFICATIONS_EMAIL_ENABLED') ?? 'true') !== 'false';
     this.transporter = nodemailer.createTransport({
       host: this.config.get<string>('SMTP_HOST') ?? 'localhost',
       port: Number(this.config.get<string>('SMTP_PORT') ?? 1025),
       secure: (this.config.get<string>('SMTP_SECURE') ?? 'false') === 'true'
     });
+  }
+
+  onModuleInit() {
+    this.scheduler = setInterval(() => {
+      void this.runScheduledDueChecks();
+    }, 60 * 60 * 1000);
+  }
+
+  onModuleDestroy() {
+    if (this.scheduler) clearInterval(this.scheduler);
   }
 
   listForUser(actor: CurrentUser) {
@@ -179,13 +190,14 @@ export class NotificationsService {
   }
 
   async runDueChecks(actor: CurrentUser) {
+    const settings = await this.settingsService.list();
     const now = new Date();
     const todayStart = new Date(now);
     todayStart.setHours(0, 0, 0, 0);
     const todayEnd = new Date(todayStart);
     todayEnd.setDate(todayEnd.getDate() + 1);
-    const reminderDays = Number(this.config.get<string>('NOTIFICATION_REMINDER_DAYS') ?? 7);
-    const riskDays = Number(this.config.get<string>('RISK_ACCEPTANCE_EXPIRY_REMINDER_DAYS') ?? 14);
+    const reminderDays = settings.notificationReminderDays;
+    const riskDays = settings.riskAcceptanceExpiryReminderDays;
     const dueSoon = new Date(todayEnd);
     dueSoon.setDate(dueSoon.getDate() + reminderDays);
     const riskSoon = new Date(todayEnd);
@@ -267,6 +279,23 @@ export class NotificationsService {
     return { dueFindings: dueFindings.length, overdueFindings: overdueFindings.length, expiringRisks: expiringRisks.length, created };
   }
 
+  async runScheduledDueChecks() {
+    const settings = await this.settingsService.list();
+    if (!settings.notificationsSchedulerEnabled) return { skipped: true, reason: 'scheduler-disabled' };
+    const actor = await this.prisma.user.findFirst({ where: { status: 'ACTIVE', role: 'SYSTEM_ADMIN' } });
+    if (!actor) return { skipped: true, reason: 'no-system-admin' };
+    return this.runDueChecks({
+      id: actor.id,
+      keycloakUserId: actor.keycloakUserId,
+      email: actor.email,
+      fullName: actor.fullName,
+      role: actor.role,
+      organizationId: actor.organizationId,
+      organizationName: 'System',
+      organizationType: 'PAYSYS'
+    });
+  }
+
   private async createForUsers(users: User[], input: Omit<NotificationInput, 'userId'>) {
     const unique = this.uniqueUsers(users);
     for (const user of unique) {
@@ -301,7 +330,8 @@ export class NotificationsService {
     const notification = await this.prisma.notification.create({ data: input });
     let emailSent = false;
     let emailError: string | undefined;
-    if (this.emailEnabled) {
+    const settings = await this.settingsService.list();
+    if (settings.notificationsEmailEnabled) {
       try {
         const user = await this.prisma.user.findUniqueOrThrow({ where: { id: input.userId } });
         await this.transporter.sendMail({

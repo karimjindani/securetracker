@@ -14,40 +14,63 @@ const actor: CurrentUser = {
   organizationType: 'PAYSYS'
 };
 
+const config = {
+  get: vi.fn((key: string) => {
+    if (key === 'NOTIFICATIONS_EMAIL_ENABLED') return 'true';
+    if (key === 'NOTIFICATIONS_SCHEDULER_ENABLED') return 'false';
+    if (key === 'NOTIFICATION_REMINDER_DAYS') return '7';
+    if (key === 'RISK_ACCEPTANCE_EXPIRY_REMINDER_DAYS') return '14';
+    return undefined;
+  })
+};
+
 describe('SettingsService', () => {
-  it('returns the default page size when no setting exists', async () => {
+  it('returns all defaults when no settings exist', async () => {
     const prisma = {
       systemSetting: {
-        findUnique: vi.fn().mockResolvedValue(null)
+        findMany: vi.fn().mockResolvedValue([])
       }
     };
 
-    await expect(new SettingsService(prisma as never).list()).resolves.toEqual({
+    await expect(new SettingsService(prisma as never, config as never).list()).resolves.toEqual({
       defaultPageSize: 10,
-      pageSizeOptions: [10, 25, 50, 100]
+      pageSizeOptions: [10, 25, 50, 100],
+      scheduleHealthWarningDays: 7,
+      notificationReminderDays: 7,
+      riskAcceptanceExpiryReminderDays: 14,
+      notificationsEmailEnabled: true,
+      notificationsSchedulerEnabled: false,
+      auditRetentionDays: 365
     });
   });
 
-  it('updates the default page size and writes an audit log', async () => {
+  it('updates changed settings and writes one audit log per key', async () => {
     const prisma = {
       systemSetting: {
-        findUnique: vi.fn().mockResolvedValueOnce({ key: 'DEFAULT_PAGE_SIZE', value: '10' }).mockResolvedValueOnce({ key: 'DEFAULT_PAGE_SIZE', value: '25' }),
-        upsert: vi.fn().mockResolvedValue({ key: 'DEFAULT_PAGE_SIZE', value: '25' })
+        findMany: vi.fn().mockResolvedValue([
+          { key: 'DEFAULT_PAGE_SIZE', value: '25' },
+          { key: 'SCHEDULE_HEALTH_WARNING_DAYS', value: '10' }
+        ]),
+        findUnique: vi.fn().mockResolvedValueOnce({ key: 'DEFAULT_PAGE_SIZE', value: '10' }).mockResolvedValueOnce(null),
+        upsert: vi
+          .fn()
+          .mockResolvedValueOnce({ key: 'DEFAULT_PAGE_SIZE', value: '25' })
+          .mockResolvedValueOnce({ key: 'SCHEDULE_HEALTH_WARNING_DAYS', value: '10' })
       },
       auditLog: {
         create: vi.fn().mockResolvedValue({})
       }
     };
 
-    const result = await new SettingsService(prisma as never).update({ defaultPageSize: 25 }, actor);
+    const result = await new SettingsService(prisma as never, config as never).update(
+      { defaultPageSize: 25, scheduleHealthWarningDays: 10 },
+      actor
+    );
 
     expect(result.defaultPageSize).toBe(25);
-    expect(prisma.systemSetting.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { key: 'DEFAULT_PAGE_SIZE' },
-        update: expect.objectContaining({ value: '25', updatedById: 'user-1' })
-      })
-    );
+    expect(result.scheduleHealthWarningDays).toBe(10);
+    expect(prisma.systemSetting.upsert).toHaveBeenCalledTimes(2);
+    expect(prisma.auditLog.create).toHaveBeenCalledTimes(2);
     expect(prisma.auditLog.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -58,7 +81,15 @@ describe('SettingsService', () => {
     );
   });
 
-  it('rejects unsupported page sizes', async () => {
-    await expect(new SettingsService({} as never).update({ defaultPageSize: 7 }, actor)).rejects.toBeInstanceOf(BadRequestException);
+  it('rejects unsupported settings values', async () => {
+    await expect(
+      new SettingsService({} as never, config as never).update({ defaultPageSize: 7 }, actor)
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      new SettingsService({} as never, config as never).update({ scheduleHealthWarningDays: 31 }, actor)
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      new SettingsService({} as never, config as never).update({ notificationsEmailEnabled: 'yes' as never }, actor)
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

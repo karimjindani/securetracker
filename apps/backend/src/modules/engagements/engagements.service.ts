@@ -14,6 +14,7 @@ import {
 import type { CurrentUser } from '../auth/current-user.types.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { SettingsService } from '../settings/settings.service.js';
 
 export interface ListEngagementsQuery {
   year?: string;
@@ -73,10 +74,11 @@ const orderedTransitions: Partial<Record<EngagementStatus, EngagementStatus[]>> 
 export class EngagementsService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
-    @Inject(NotificationsService) private readonly notifications: NotificationsService
+    @Inject(NotificationsService) private readonly notifications: NotificationsService,
+    @Inject(SettingsService) private readonly settingsService: SettingsService
   ) {}
 
-  list(query: ListEngagementsQuery) {
+  async list(query: ListEngagementsQuery) {
     const parsedYear = query.year === undefined ? undefined : Number(query.year);
     if (query.year !== undefined && !Number.isInteger(parsedYear)) {
       throw new BadRequestException('Year must be a number');
@@ -85,6 +87,7 @@ export class EngagementsService {
     const scheduleHealth = this.parseScheduleHealth(query.scheduleHealth);
     const search = query.search?.trim();
 
+    const settings = await this.settingsService.list();
     return this.prisma.vaptEngagement.findMany({
       where: {
         plannedYear: parsedYear,
@@ -105,7 +108,7 @@ export class EngagementsService {
       }
     }).then((engagements) =>
       engagements
-        .map((engagement) => this.withScheduleHealth(engagement))
+        .map((engagement) => this.withScheduleHealth(engagement, settings.scheduleHealthWarningDays))
         .filter((engagement) => !scheduleHealth || engagement.scheduleHealth === scheduleHealth)
     );
   }
@@ -312,10 +315,13 @@ export class EngagementsService {
     return value as ScheduleHealth;
   }
 
-  private withScheduleHealth<T extends { status: EngagementStatus; plannedStartDate?: Date | null; plannedEndDate?: Date | null }>(engagement: T) {
+  private withScheduleHealth<T extends { status: EngagementStatus; plannedStartDate?: Date | null; plannedEndDate?: Date | null }>(
+    engagement: T,
+    warningDays: number
+  ) {
     return {
       ...engagement,
-      scheduleHealth: computeScheduleHealth(engagement.status, engagement.plannedStartDate, engagement.plannedEndDate)
+      scheduleHealth: computeScheduleHealth(engagement.status, engagement.plannedStartDate, engagement.plannedEndDate, new Date(), warningDays)
     };
   }
 
