@@ -7,7 +7,7 @@ export class HealthService {
     return {
       service: 'securetracker-api',
       status: 'ok',
-      version: '0.18.8',
+      version: '0.18.9',
       firstEngagementStatus: engagementStatuses[0]
     };
   }

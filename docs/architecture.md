@@ -770,7 +770,7 @@ Dashboards should be generated from PostgreSQL views or backend aggregation APIs
 
 Implemented in v0.18.4:
 
-- Reset restores a deterministic validation set with 25 applications and 50 annual Whitebox engagements.
+- Reset restores a deterministic validation set with 23 screenshot-derived applications and 45 mixed Whitebox / Black-Grey 2026 engagements.
 - Each seeded application has two Whitebox engagements spaced six months apart.
 - Engagements are distributed across lifecycle statuses so the Kanban board can be validated without manual data entry.
 
@@ -801,6 +801,13 @@ Implemented in v0.18.8:
 - Backend startup validates required production environment values when `SECURETRACKER_DEPLOYMENT_MODE=production`.
 - Local Keycloak and Mailpit remain development services; production uses external OIDC and SMTP.
 - CI adds dependency audit, secret scan, Docker image build, production Compose validation, and non-blocking container scanning.
+
+Implemented in v0.18.9:
+
+- Seeded validation data is derived only from the supplied 2026 tracker screenshots.
+- Reset restores 23 applications and 45 2026 VAPT calendar engagements with mixed `WHITEBOX` and `BLACK_GREY` assessment types.
+- Screenshot owner and developer columns populate application owner fields where visible.
+- No scoping records, reports, findings, risk acceptances, tickets, or synthetic applications are seeded.
 
 ### Application Heatmap
 
@@ -1116,3 +1123,7 @@ Settings are global portal configuration records. Database settings are authorit
 ## v0.18.8 Production Hardening Note
 
 The production pilot target is a Docker VM deployment. The application containers remain frontend, backend, PostgreSQL, and MinIO, while OIDC and SMTP are external production services. The external Ops Console remains local/dev only and is not part of production Compose.
+
+## v0.18.9 Screenshot Seed Data Note
+
+The seeded baseline now reflects the supplied 2026 calendar and pending-report tracker images. Calendar rows are seeded as month-based one-week windows in 2026, and current engagement statuses are applied only where the tracker row can be matched to a calendar application.

@@ -22,6 +22,7 @@ export interface ResetSummary extends CleanupSummary {
   baselineEngagements: number;
   baselineScopingRecords: number;
   baselineWhiteboxEngagements: number;
+  baselineBlackGreyEngagements: number;
 }
 
 export async function cleanupRegressionData(prisma = new PrismaClient()): Promise<CleanupSummary> {
@@ -177,7 +178,8 @@ export async function seedBaselineData(prisma = new PrismaClient()) {
     baselineApplications: baselineApplications.count,
     baselineEngagements: baselineEngagements.engagements,
     baselineScopingRecords: baselineEngagements.scopingRecords,
-    baselineWhiteboxEngagements: baselineEngagements.whiteboxEngagements
+    baselineWhiteboxEngagements: baselineEngagements.whiteboxEngagements,
+    baselineBlackGreyEngagements: baselineEngagements.blackGreyEngagements
   };
 }
 
@@ -303,42 +305,13 @@ export async function seedBaselineUsers(prisma = new PrismaClient()) {
 
 async function seedBaselineApplications(prisma: PrismaClient) {
   const paysysAdmin = await prisma.user.findUniqueOrThrow({ where: { email: 'paysys.admin@example.local' } });
-  const names = [
-    'Core Banking Portal',
-    'Mobile Banking API',
-    'Internet Banking Web',
-    'Corporate Payments Gateway',
-    'ATM Switch Interface',
-    'Card Management System',
-    'Merchant Acquiring Portal',
-    'Digital Wallet Service',
-    'Loan Origination Platform',
-    'Treasury Operations Portal',
-    'Remittance Processing Hub',
-    'Fraud Monitoring Console',
-    'Customer Onboarding Portal',
-    'KYC Document Repository',
-    'Call Center CRM',
-    'Branch Teller System',
-    'Open Banking API',
-    'Data Warehouse Portal',
-    'Regulatory Reporting App',
-    'HR Self Service Portal',
-    'Vendor Management Portal',
-    'Statement Generation Service',
-    'Notification Gateway',
-    'Dispute Management System',
-    'API Developer Portal'
-  ];
-  const applications = names.map((name, index) => ({
-    name: `Seeded ${name}`,
-    description: `Seeded application ${index + 1} for annual Whitebox VAPT validation.`,
-    businessOwnerName: `${name} Business Owner`,
-    technicalOwnerName: `${name} Technical Owner`,
-    environment: index % 5 === 0 ? ('UAT' as const) : ('PRODUCTION' as const),
-    criticality: index % 4 === 0 ? 'CRITICAL' : index % 3 === 0 ? 'MEDIUM' : 'HIGH',
-    technologyStack: index % 2 === 0 ? 'Java, PostgreSQL, React' : 'Node.js, PostgreSQL, Angular',
-    internetFacing: index % 3 !== 0
+  const applications = screenshotApplications.map((application, index) => ({
+    ...application,
+    description: '2026 VAPT calendar application seeded from the supplied tracker screenshots.',
+    environment: 'PRODUCTION' as const,
+    criticality: index % 4 === 0 ? 'CRITICAL' : 'HIGH',
+    technologyStack: 'Screenshot baseline - stack not specified',
+    internetFacing: true
   }));
 
   let count = 0;
@@ -362,75 +335,166 @@ async function seedBaselineEngagements(prisma: PrismaClient) {
   const paysysAdmin = await prisma.user.findUniqueOrThrow({ where: { email: 'paysys.admin@example.local' } });
   const apprise = await prisma.organization.findUniqueOrThrow({ where: { name: 'Apprise' } });
   const applications = await prisma.application.findMany({
-    where: { name: { startsWith: 'Seeded ' } },
+    where: { name: { in: screenshotApplications.map((application) => application.name) } },
     orderBy: { name: 'asc' }
   });
-  const currentYear = new Date().getFullYear();
-  const h1Statuses = [
-    'PLANNED',
-    'PAYSYS_APPRISE_INITIATED',
-    'APPRISE_ASSESSMENT',
-    'DRAFT_REPORT_UPLOADED',
-    'PAYSYS_TRIAGE',
-    'DEVELOPER_FIX',
-    'FIXED_PENDING_REVALIDATION',
-    'APPRISE_REVALIDATION',
-    'FINAL_REPORT_UPLOADED',
-    'PAYSYS_IS_REVIEW_AND_COMMENT',
-    'NBP_IS_REVIEW_CLOSING_MEETING',
-    'CLOSED',
-    'GO_LIVE'
-  ] as const;
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  let scopingRecords = 0;
+  const applicationByName = new Map(applications.map((application) => [application.name, application]));
+  const engagementIndexByMonth = new Map<string, number>();
   let engagements = 0;
-  for (const [index, application] of applications.entries()) {
-    for (const half of [0, 1]) {
-      const monthIndex = (index % 6) + half * 6;
-      const weekInMonth = Math.floor(index / 6);
-      const day = 1 + weekInMonth * 7;
-      const plannedStartDate = new Date(Date.UTC(currentYear, monthIndex, day, 5, 0, 0));
-      const plannedEndDate = new Date(Date.UTC(currentYear, monthIndex, day + 4, 13, 0, 0));
-      const status = half === 0 ? h1Statuses[index % h1Statuses.length] : 'PLANNED';
-      const engagement = await prisma.vaptEngagement.create({
-        data: {
-          applicationId: application.id,
-          title: `Seeded ${application.name.replace(/^Seeded /, '')} H${half + 1} Whitebox VAPT`,
-          assessmentType: 'WHITEBOX',
-          plannedYear: currentYear,
-          plannedMonth: monthNames[monthIndex],
-          plannedStartDate,
-          plannedEndDate,
-          vendorOrganizationId: apprise.id,
-          status,
-          createdById: paysysAdmin.id
-        }
-      });
-      engagements += 1;
-      if (status !== 'PLANNED') {
-        await prisma.scopingRecord.create({
-          data: {
-            engagementId: engagement.id,
-            meetingDate: new Date(Date.UTC(currentYear, monthIndex, Math.max(1, day - 3), 5, 0, 0)),
-            meetingTime: '10:00',
-            participants: 'Paysys Labs Security, Apprise VAPT Team, NBP Information Security optional attendee',
-            minutes: 'Seeded scoping notes for annual validation. No passwords are stored.',
-            scopeIncluded: `${application.name} application, exposed APIs, and supporting integration points.`,
-            scopeExcluded: 'Production credentials, destructive tests, and out-of-scope third-party systems.',
-            testingWindowStart: plannedStartDate,
-            testingWindowEnd: plannedEndDate,
-            testAccountsSummary: 'Seeded test account summary only; no passwords stored.',
-            architectureSummary: 'Seeded high-level architecture summary for workflow validation.',
-            recordStatus: status === 'PAYSYS_APPRISE_INITIATED' ? 'DRAFT' : 'FINAL',
-            finalizedAt: status === 'PAYSYS_APPRISE_INITIATED' ? undefined : new Date(Date.UTC(currentYear, monthIndex, Math.max(1, day - 2), 5, 0, 0)),
-            finalizedById: status === 'PAYSYS_APPRISE_INITIATED' ? undefined : paysysAdmin.id,
-            createdById: paysysAdmin.id
-          }
-        });
-        scopingRecords += 1;
+  let whiteboxEngagements = 0;
+  let blackGreyEngagements = 0;
+
+  for (const entry of screenshotCalendarEntries) {
+    const application = applicationByName.get(entry.applicationName);
+    if (!application) throw new Error(`Missing screenshot application ${entry.applicationName}`);
+    const windowIndex = engagementIndexByMonth.get(entry.month) ?? 0;
+    engagementIndexByMonth.set(entry.month, windowIndex + 1);
+    const { plannedStartDate, plannedEndDate } = plannedWindow(entry.month, windowIndex);
+    const status =
+      screenshotStatusByApplication[entry.applicationName] && plannedStartDate <= new Date(Date.UTC(2026, 5, 30, 23, 59, 59))
+        ? screenshotStatusByApplication[entry.applicationName]
+        : 'PLANNED';
+
+    await prisma.vaptEngagement.create({
+      data: {
+        applicationId: application.id,
+        title: `${entry.applicationName} ${entry.assessmentType === 'WHITEBOX' ? 'Whitebox' : 'Black/Grey'} VAPT - ${entry.month} 2026`,
+        assessmentType: entry.assessmentType,
+        plannedYear: 2026,
+        plannedMonth: entry.month,
+        plannedStartDate,
+        plannedEndDate,
+        vendorOrganizationId: apprise.id,
+        status,
+        createdById: paysysAdmin.id
       }
-    }
+    });
+    engagements += 1;
+    if (entry.assessmentType === 'WHITEBOX') whiteboxEngagements += 1;
+    if (entry.assessmentType === 'BLACK_GREY') blackGreyEngagements += 1;
   }
 
-  return { engagements, scopingRecords, whiteboxEngagements: engagements };
+  return { engagements, scopingRecords: 0, whiteboxEngagements, blackGreyEngagements };
+}
+
+const screenshotApplications = [
+  { name: 'NBP Digital Android (Mobile App)', businessOwnerName: 'Aamir Khan', technicalOwnerName: 'Eiquan' },
+  { name: 'NBP Digital IOS (Mobile App)', businessOwnerName: 'Aamir Khan', technicalOwnerName: 'Eiquan' },
+  { name: 'NBP Internet Banking', businessOwnerName: 'Aamir Khan', technicalOwnerName: 'Mohsin' },
+  { name: 'NBP Digital back office portal', businessOwnerName: 'Aamir Khan', technicalOwnerName: 'Owais' },
+  { name: 'NBP digital app services / NBP IB/MB APIs', businessOwnerName: 'Aamir Khan', technicalOwnerName: 'Eiquan' },
+  { name: 'NBP RAAST APIs (P2P)', businessOwnerName: 'Omer Khan', technicalOwnerName: 'Yasir' },
+  { name: 'NBP RAAST APIs (P2M)', businessOwnerName: 'Omer Khan', technicalOwnerName: 'Yasir' },
+  { name: 'NBP MPG RAAST Back office', businessOwnerName: 'Aamir Khan', technicalOwnerName: 'Salman Z' },
+  { name: 'NBP DAO Web Portal', businessOwnerName: 'Nasir Khan', technicalOwnerName: 'Saeed' },
+  { name: 'NBP DAO APIs', businessOwnerName: 'Nasir Khan', technicalOwnerName: 'Saeed' },
+  { name: 'NBP ePayments Portal', businessOwnerName: 'Yasher Ali', technicalOwnerName: 'Huzaifa' },
+  { name: 'NBP ePayments APIs', businessOwnerName: 'Yasher Ali', technicalOwnerName: 'Huzaifa' },
+  { name: 'NBP ePayments Backoffice', businessOwnerName: 'Omer Khan', technicalOwnerName: 'Babar' },
+  { name: 'NBP Merchant Management System', businessOwnerName: 'Omer Khan', technicalOwnerName: 'Mubashir' },
+  { name: 'NBP Merchant Portal', businessOwnerName: 'Omer Khan', technicalOwnerName: 'Mubashir' },
+  { name: 'NBP Merchant APIs', businessOwnerName: 'Omer Khan', technicalOwnerName: 'Usama' },
+  { name: 'NBP WHATSAPP APIs', businessOwnerName: 'Yasher Ali', technicalOwnerName: 'Ahmed A' },
+  { name: 'NBP RM Portal', businessOwnerName: 'Nasir Khan', technicalOwnerName: 'Saeed' },
+  { name: 'NBP IBFT APIs', businessOwnerName: 'Aamir Khan', technicalOwnerName: 'Umer A' },
+  { name: 'NBP UBCS APIs', businessOwnerName: 'Aamir Khan', technicalOwnerName: 'Umer A' },
+  { name: 'NBP RAAST OTC P2P', businessOwnerName: 'Omer Khan', technicalOwnerName: 'Asad Arshad' },
+  { name: 'NBP RAAST Bulk Sending', businessOwnerName: 'Omer Khan', technicalOwnerName: undefined },
+  { name: 'NBP RAAST Bulk Receiving', businessOwnerName: 'Omer Khan', technicalOwnerName: undefined }
+];
+
+const screenshotCalendarEntries = [
+  { applicationName: 'NBP Digital Android (Mobile App)', month: 'February', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP Digital Android (Mobile App)', month: 'August', assessmentType: 'WHITEBOX' as const },
+  { applicationName: 'NBP Digital IOS (Mobile App)', month: 'February', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP Digital IOS (Mobile App)', month: 'August', assessmentType: 'WHITEBOX' as const },
+  { applicationName: 'NBP Internet Banking', month: 'March', assessmentType: 'WHITEBOX' as const },
+  { applicationName: 'NBP Internet Banking', month: 'September', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP Digital back office portal', month: 'April', assessmentType: 'WHITEBOX' as const },
+  { applicationName: 'NBP Digital back office portal', month: 'October', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP digital app services / NBP IB/MB APIs', month: 'March', assessmentType: 'WHITEBOX' as const },
+  { applicationName: 'NBP digital app services / NBP IB/MB APIs', month: 'September', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP RAAST APIs (P2P)', month: 'June', assessmentType: 'WHITEBOX' as const },
+  { applicationName: 'NBP RAAST APIs (P2P)', month: 'November', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP RAAST APIs (P2M)', month: 'February', assessmentType: 'WHITEBOX' as const },
+  { applicationName: 'NBP RAAST APIs (P2M)', month: 'July', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP MPG RAAST Back office', month: 'November', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP DAO Web Portal', month: 'January', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP DAO Web Portal', month: 'July', assessmentType: 'WHITEBOX' as const },
+  { applicationName: 'NBP DAO APIs', month: 'March', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP DAO APIs', month: 'August', assessmentType: 'WHITEBOX' as const },
+  { applicationName: 'NBP ePayments Portal', month: 'April', assessmentType: 'WHITEBOX' as const },
+  { applicationName: 'NBP ePayments Portal', month: 'October', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP ePayments APIs', month: 'April', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP ePayments APIs', month: 'September', assessmentType: 'WHITEBOX' as const },
+  { applicationName: 'NBP ePayments Backoffice', month: 'May', assessmentType: 'WHITEBOX' as const },
+  { applicationName: 'NBP ePayments Backoffice', month: 'October', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP Merchant Management System', month: 'May', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP Merchant Management System', month: 'October', assessmentType: 'WHITEBOX' as const },
+  { applicationName: 'NBP Merchant Portal', month: 'April', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP Merchant Portal', month: 'September', assessmentType: 'WHITEBOX' as const },
+  { applicationName: 'NBP Merchant APIs', month: 'January', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP Merchant APIs', month: 'July', assessmentType: 'WHITEBOX' as const },
+  { applicationName: 'NBP WHATSAPP APIs', month: 'May', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP WHATSAPP APIs', month: 'November', assessmentType: 'WHITEBOX' as const },
+  { applicationName: 'NBP RM Portal', month: 'May', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP RM Portal', month: 'October', assessmentType: 'WHITEBOX' as const },
+  { applicationName: 'NBP IBFT APIs', month: 'June', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP IBFT APIs', month: 'November', assessmentType: 'WHITEBOX' as const },
+  { applicationName: 'NBP UBCS APIs', month: 'June', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP UBCS APIs', month: 'November', assessmentType: 'WHITEBOX' as const },
+  { applicationName: 'NBP RAAST OTC P2P', month: 'June', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP RAAST OTC P2P', month: 'November', assessmentType: 'WHITEBOX' as const },
+  { applicationName: 'NBP RAAST Bulk Sending', month: 'July', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP RAAST Bulk Sending', month: 'October', assessmentType: 'WHITEBOX' as const },
+  { applicationName: 'NBP RAAST Bulk Receiving', month: 'July', assessmentType: 'BLACK_GREY' as const },
+  { applicationName: 'NBP RAAST Bulk Receiving', month: 'October', assessmentType: 'WHITEBOX' as const }
+];
+
+const screenshotStatusByApplication = {
+  'NBP Digital Android (Mobile App)': 'CLOSED',
+  'NBP Digital IOS (Mobile App)': 'CLOSED',
+  'NBP Internet Banking': 'DEVELOPER_FIX',
+  'NBP Digital back office portal': 'APPRISE_REVALIDATION',
+  'NBP digital app services / NBP IB/MB APIs': 'DEVELOPER_FIX',
+  'NBP RAAST APIs (P2P)': 'DEVELOPER_FIX',
+  'NBP RAAST APIs (P2M)': 'CLOSED',
+  'NBP DAO Web Portal': 'DEVELOPER_FIX',
+  'NBP DAO APIs': 'DEVELOPER_FIX',
+  'NBP ePayments Portal': 'NBP_IS_REVIEW_CLOSING_MEETING',
+  'NBP ePayments APIs': 'NBP_IS_REVIEW_CLOSING_MEETING',
+  'NBP ePayments Backoffice': 'NBP_IS_REVIEW_CLOSING_MEETING',
+  'NBP Merchant Management System': 'PLANNED',
+  'NBP Merchant Portal': 'PLANNED',
+  'NBP Merchant APIs': 'PLANNED',
+  'NBP WHATSAPP APIs': 'APPRISE_ASSESSMENT',
+  'NBP RM Portal': 'DEVELOPER_FIX',
+  'NBP IBFT APIs': 'APPRISE_ASSESSMENT',
+  'NBP UBCS APIs': 'APPRISE_ASSESSMENT',
+  'NBP RAAST OTC P2P': 'APPRISE_ASSESSMENT'
+} as const;
+
+const monthIndexByName = new Map([
+  ['January', 0],
+  ['February', 1],
+  ['March', 2],
+  ['April', 3],
+  ['May', 4],
+  ['June', 5],
+  ['July', 6],
+  ['August', 7],
+  ['September', 8],
+  ['October', 9],
+  ['November', 10],
+  ['December', 11]
+]);
+
+function plannedWindow(month: string, entryIndexInMonth: number) {
+  const monthIndex = monthIndexByName.get(month);
+  if (monthIndex === undefined) throw new Error(`Invalid screenshot month ${month}`);
+  const day = 1 + (entryIndexInMonth % 5) * 5;
+  return {
+    plannedStartDate: new Date(Date.UTC(2026, monthIndex, day, 5, 0, 0)),
+    plannedEndDate: new Date(Date.UTC(2026, monthIndex, day + 4, 13, 0, 0))
+  };
 }

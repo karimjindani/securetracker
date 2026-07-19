@@ -1,6 +1,6 @@
 # Principles of Software Development
 
-Current code version: `v0.18.8`
+Current code version: `v0.18.9`
 
 Baseline commit: _set on merge_ (previous: `v0.18.0` @ `bf59ca4`)
 

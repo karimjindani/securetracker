@@ -6,7 +6,7 @@ describe('HealthService', () => {
     expect(new HealthService().getHealth()).toMatchObject({
       service: 'securetracker-api',
       status: 'ok',
-      version: '0.18.8',
+      version: '0.18.9',
       firstEngagementStatus: 'PLANNED'
     });
   });

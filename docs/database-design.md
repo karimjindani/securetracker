@@ -685,9 +685,9 @@ Portal settings are stored in `system_settings`; reset restores the baseline val
 
 Seeded applications:
 
-- `Seeded Core Banking Portal`
-- `Seeded Mobile Banking API`
-- `Seeded Internet Banking Web`
+- `NBP Internet Banking`
+- `NBP Digital Android (Mobile App)`
+- `NBP RAAST Bulk Receiving`
 
 Seeded engagement statuses:
 
