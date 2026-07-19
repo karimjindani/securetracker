@@ -2,6 +2,10 @@
 
 Current code version: `v0.18.9`
 
+Current documentation baseline: `v0.18.10`
+
+Canonical current-state docs: [`Product_Architecture.md`](Product_Architecture.md), [`Data_Model.md`](Data_Model.md), [`Data_Dictionary.md`](Data_Dictionary.md), and [`User_Guide.md`](User_Guide.md).
+
 Baseline commit: _set on merge_ (previous: `v0.18.0` @ `bf59ca4`)
 
 0. Do what is documented. Always document what you do. Documents should be updated in docs folder in markdown format.

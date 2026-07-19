@@ -1,5 +1,9 @@
 # Backup and Restore Runbook
 
+## Current Documentation Note
+
+This runbook applies to the current Docker VM pilot architecture described in [`Product_Architecture.md`](Product_Architecture.md). Restore validation should not load screenshot-seeded validation data into production.
+
 ## Scope
 
 This runbook covers the Docker VM pilot deployment for PostgreSQL data, MinIO object storage, and host-managed configuration files.

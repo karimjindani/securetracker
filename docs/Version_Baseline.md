@@ -109,9 +109,9 @@ Baseline contents:
 - Seeded applications, engagements, and scoping records for repeatable regression testing.
 - Regression coverage for scoping creation/finalization and closure/go-live role boundaries.
 
-Seeded records:
+Historical seeded records for this earlier slice, superseded by the `v0.18.9` screenshot-derived baseline:
 
-- `Seeded Core Banking Portal`, `Seeded Mobile Banking API`, and `Seeded Internet Banking Web`.
+- Three synthetic application records used only by this earlier historical slice.
 - Engagements in `PLANNED`, `PAYSYS_APPRISE_INITIATED`, `APPRISE_ASSESSMENT`, `NBP_IS_REVIEW_CLOSING_MEETING`, and `CLOSED`.
 - Draft and final scoping records with no real credentials or passwords.
 
@@ -289,9 +289,9 @@ Baseline contents:
 
 - Reset applies Prisma schema sync before restoring seeded validation data.
 - Seeded baseline includes exactly 3 organizations: NBP, Paysys Labs, and Apprise.
-- Seeded baseline includes 7 demo users, 25 applications, and 50 annual Whitebox engagements.
-- Each seeded application has two Whitebox engagements spaced six months apart.
-- Seeded annual plan is distributed so Apprise has no more than five assessments per month.
+- Historical seeded baseline included 7 demo users, 25 applications, and 50 annual Whitebox engagements. This was superseded by `v0.18.9`, which restores 23 screenshot-derived applications and 45 mixed Whitebox / Black-Grey engagements.
+- Each historical seeded application had two Whitebox engagements spaced six months apart.
+- The historical seeded annual plan was distributed so Apprise had no more than five assessments per month.
 - Engagements page renders lifecycle Kanban columns instead of a table-first list.
 - Organizations page clarifies workflow-party meaning and shows user/vendor engagement counts.
 
@@ -457,3 +457,38 @@ Code reference:
 
 - Branch: `codex/v0.18.9-screenshot-seeded-data`
 - Version: `0.18.9`
+
+## v0.18.10 - Documentation Alignment
+
+Status: Documentation-only baseline
+
+Version allocation:
+
+- `AGENTS.md` required remote version inspection before assigning the documentation baseline.
+- `origin/main` was fetched with prune and active remote branches were inspected.
+- `origin/main` contained `v0.18.9`; no active remote branch allocated a higher version.
+- This documentation-only slice therefore uses `v0.18.10`.
+
+Baseline contents:
+
+- Canonical current-state product architecture document with Mermaid UML-style diagrams.
+- Canonical data model document derived from `prisma/schema.prisma`.
+- Canonical data dictionary covering implemented enums, models, key fields, and operational notes.
+- Consolidated screenshot-based user guide using the local seeded `v0.18.9` app.
+- Living docs now reference the canonical current-state documents.
+- Software remains `0.18.9`; no package, schema, API, Docker, or runtime behavior changes are included.
+
+Documentation references:
+
+- `docs/Product_Architecture.md`
+- `docs/Data_Model.md`
+- `docs/Data_Dictionary.md`
+- `docs/User_Guide.md`
+- `docs/plans/v0.18.10-documentation-alignment-plan.md`
+- `docs/testing/v0.18.10-documentation-review.md`
+
+Code reference:
+
+- Branch: `codex/v0.18.10-documentation-alignment`
+- Software version: `0.18.9`
+- Documentation baseline: `v0.18.10`

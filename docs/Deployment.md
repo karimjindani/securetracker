@@ -1,5 +1,14 @@
 # Deployment Guide
 
+## Current Documentation Note
+
+This deployment guide should be read with the canonical current-state docs:
+
+- [`Product_Architecture.md`](Product_Architecture.md)
+- [`Data_Model.md`](Data_Model.md)
+- [`Data_Dictionary.md`](Data_Dictionary.md)
+- [`User_Guide.md`](User_Guide.md)
+
 ## v0.1.0 Local Development
 
 Copy environment defaults:

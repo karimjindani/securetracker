@@ -2,6 +2,10 @@
 
 ## Version 1.0
 
+## Current Documentation Note
+
+The canonical current-state product architecture for the implemented `v0.18.9` software is maintained in [`Product_Architecture.md`](Product_Architecture.md). This historical architecture document is retained for continuity with earlier planning and implementation slices.
+
 ---
 
 # 1. Architecture Objective
