@@ -97,7 +97,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthProvider.js';
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || 'http://localhost:3000';
 GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).toString();
 
 type RecordStatus = 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
@@ -689,7 +689,7 @@ function Dashboard() {
     <Stack spacing={3}>
       <Box>
         <Typography variant="h5">Security Dashboard</Typography>
-        <Typography color="text.secondary">Live schedule health, Kanban engagement, governance, findings, risk acceptance, audit visibility, and admin settings for v0.18.7.</Typography>
+        <Typography color="text.secondary">Live schedule health, Kanban engagement, governance, findings, risk acceptance, audit visibility, admin settings, and production hardening for v0.18.8.</Typography>
       </Box>
       {message && <Alert severity="error">{message}</Alert>}
       {!summary ? (

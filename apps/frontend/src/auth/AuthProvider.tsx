@@ -24,10 +24,13 @@ type AuthState =
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
+const envValue = (value: string | undefined, fallback: string) => (value?.trim() ? value : fallback);
+const apiBaseUrl = envValue(import.meta.env.VITE_API_BASE_URL, 'http://localhost:3000');
+
 const keycloak = new Keycloak({
-  url: import.meta.env.VITE_KEYCLOAK_URL ?? 'http://localhost:18080',
-  realm: import.meta.env.VITE_KEYCLOAK_REALM ?? 'securetracker',
-  clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID ?? 'securetracker-web'
+  url: envValue(import.meta.env.VITE_KEYCLOAK_URL, 'http://localhost:18080'),
+  realm: envValue(import.meta.env.VITE_KEYCLOAK_REALM, 'securetracker'),
+  clientId: envValue(import.meta.env.VITE_KEYCLOAK_CLIENT_ID, 'securetracker-web')
 });
 
 let keycloakInitPromise: Promise<boolean> | undefined;
@@ -50,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setState('anonymous');
           return;
         }
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000'}/me`, {
+        const response = await fetch(`${apiBaseUrl}/me`, {
           headers: { Authorization: `Bearer ${keycloak.token}` }
         });
         if (!response.ok) {

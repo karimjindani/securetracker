@@ -1,0 +1,9 @@
+title = "SecureTracker gitleaks configuration"
+
+[allowlist]
+description = "Allow documented local/demo placeholders while scanning application code and docs."
+paths = [
+  '''^\.env\.example$''',
+  '''^\.env\.production\.example$''',
+  '''^docker/keycloak/securetracker-realm\.json$'''
+]

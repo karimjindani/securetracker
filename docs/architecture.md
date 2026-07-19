@@ -795,6 +795,13 @@ Implemented in v0.18.7:
 - Notification due checks use configured reminder windows and email enablement.
 - A local backend scheduler periodically checks whether scheduled due checks are enabled before running.
 
+Implemented in v0.18.8:
+
+- Production Docker VM deployment assets are defined in `docker-compose.prod.yml` and `.env.production.example`.
+- Backend startup validates required production environment values when `SECURETRACKER_DEPLOYMENT_MODE=production`.
+- Local Keycloak and Mailpit remain development services; production uses external OIDC and SMTP.
+- CI adds dependency audit, secret scan, Docker image build, production Compose validation, and non-blocking container scanning.
+
 ### Application Heatmap
 
 - Application-wise critical/high/medium/low findings
@@ -1105,3 +1112,7 @@ Default Page Size is now a global portal setting. It is read through `GET /setti
 ## v0.18.7 Configuration Note
 
 Settings are global portal configuration records. Database settings are authoritative after seeded reset; notification-related environment variables remain fallback values before settings are seeded.
+
+## v0.18.8 Production Hardening Note
+
+The production pilot target is a Docker VM deployment. The application containers remain frontend, backend, PostgreSQL, and MinIO, while OIDC and SMTP are external production services. The external Ops Console remains local/dev only and is not part of production Compose.

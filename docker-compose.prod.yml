@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-securetracker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-postgres-password}
+      POSTGRES_DB: ${POSTGRES_DB:-securetracker}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-change-me-minio-access-key}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-change-me-minio-secret-key}
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend-api:
+    build:
+      context: .
+      target: backend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://securetracker-api.example.local}
+        VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL:-https://idp.example.local}
+        VITE_KEYCLOAK_REALM: ${VITE_KEYCLOAK_REALM:-securetracker}
+        VITE_KEYCLOAK_CLIENT_ID: ${VITE_KEYCLOAK_CLIENT_ID:-securetracker-web}
+    restart: unless-stopped
+    env_file:
+      - .env.production.example
+    environment:
+      SECURETRACKER_DEPLOYMENT_MODE: production
+      DATABASE_URL: ${DATABASE_URL:-postgresql://securetracker:change-me-postgres-password@postgres:5432/securetracker?schema=public}
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-change-me-minio-access-key}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-change-me-minio-secret-key}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://securetracker.example.local}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+
+  frontend:
+    build:
+      context: .
+      target: frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://securetracker-api.example.local}
+        VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL:-https://idp.example.local}
+        VITE_KEYCLOAK_REALM: ${VITE_KEYCLOAK_REALM:-securetracker}
+        VITE_KEYCLOAK_CLIENT_ID: ${VITE_KEYCLOAK_CLIENT_ID:-securetracker-web}
+    restart: unless-stopped
+    depends_on:
+      - backend-api
+    ports:
+      - "5173:80"
+
+volumes:
+  postgres-data:
+  minio-data:
