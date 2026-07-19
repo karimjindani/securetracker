@@ -2,6 +2,10 @@
 
 ## Version 1.0
 
+## Current Documentation Note
+
+The canonical current-state data model and data dictionary for the implemented `v0.18.9` software are maintained in [`Data_Model.md`](Data_Model.md) and [`Data_Dictionary.md`](Data_Dictionary.md). `prisma/schema.prisma` remains the executable source of truth.
+
 ---
 
 # 1. Purpose

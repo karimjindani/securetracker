@@ -1,5 +1,9 @@
 # CI/CD Pipeline
 
+## Current Documentation Note
+
+The CI/CD pipeline supports the `v0.18.9` SecureTracker software baseline. Current product architecture and data model references are maintained in [`Product_Architecture.md`](Product_Architecture.md), [`Data_Model.md`](Data_Model.md), and [`Data_Dictionary.md`](Data_Dictionary.md).
+
 ## CI
 
 The GitHub Actions workflow is `.github/workflows/ci.yml`.
