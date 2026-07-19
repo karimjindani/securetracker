@@ -10,7 +10,7 @@ test.beforeEach(async () => {
 test('seeded validation baseline exposes organizations, users, applications, calendar, and Kanban data', async () => {
   const systemApi = await apiFor(seededUsers.systemAdmin);
   const auditorApi = await apiFor(seededUsers.auditor);
-  const currentYear = new Date().getFullYear();
+  const currentYear = 2026;
 
   const organizationsResponse = await systemApi.get('/organizations');
   expect(organizationsResponse.ok(), await organizationsResponse.text()).toBe(true);
@@ -21,7 +21,7 @@ test('seeded validation baseline exposes organizations, users, applications, cal
     .sort();
   expect(seededOrganizationNames).toEqual(['Apprise', 'NBP', 'Paysys Labs']);
   expect(organizations.map((organization) => organization.name)).not.toContain('Platform');
-  expect(organizations.find((organization) => organization.name === 'Apprise')?._count?.vendorEngagements).toBeGreaterThanOrEqual(50);
+  expect(organizations.find((organization) => organization.name === 'Apprise')?._count?.vendorEngagements).toBeGreaterThanOrEqual(45);
 
   const usersResponse = await systemApi.get('/users');
   expect(usersResponse.ok(), await usersResponse.text()).toBe(true);
@@ -37,9 +37,20 @@ test('seeded validation baseline exposes organizations, users, applications, cal
 
   const applicationsResponse = await systemApi.get('/applications');
   expect(applicationsResponse.ok(), await applicationsResponse.text()).toBe(true);
-  const applications = (await applicationsResponse.json()) as Array<{ id: string; name: string }>;
-  const seededApplications = applications.filter((application) => application.name.startsWith('Seeded '));
-  expect(seededApplications).toHaveLength(25);
+  const applicationsResponseBody = (await applicationsResponse.json()) as Array<{ id: string; name: string; businessOwnerName?: string; technicalOwnerName?: string }>;
+  const applications = applicationsResponseBody.filter((application) => !application.name.startsWith('REGRESSION_'));
+  expect(applications).toHaveLength(23);
+  expect(applications.map((application) => application.name)).toEqual(expect.arrayContaining([
+    'NBP Internet Banking',
+    'NBP Digital Android (Mobile App)',
+    'NBP RAAST APIs (P2P)',
+    'NBP RAAST Bulk Receiving'
+  ]));
+  expect(applications.map((application) => application.name)).not.toContain('Seeded Core Banking Portal');
+  expect(applications).toEqual(expect.arrayContaining([
+    expect.objectContaining({ name: 'NBP Internet Banking', businessOwnerName: 'Aamir Khan', technicalOwnerName: 'Mohsin' }),
+    expect.objectContaining({ name: 'NBP Merchant APIs', businessOwnerName: 'Omer Khan', technicalOwnerName: 'Usama' })
+  ]));
 
   const settingsResponse = await systemApi.get('/settings');
   expect(settingsResponse.ok(), await settingsResponse.text()).toBe(true);
@@ -56,59 +67,53 @@ test('seeded validation baseline exposes organizations, users, applications, cal
 
   const calendarResponse = await systemApi.get(`/calendar?year=${currentYear}`);
   expect(calendarResponse.ok(), await calendarResponse.text()).toBe(true);
-  const calendar = (await calendarResponse.json()) as Array<{
+  const calendarResponseBody = (await calendarResponse.json()) as Array<{
     application: { id: string; name: string };
     assessmentType: string;
     plannedStartDate: string;
     plannedYear: number;
+    plannedMonth: string;
     status: string;
   }>;
-  const seededWhitebox = calendar.filter((entry) => entry.application.name.startsWith('Seeded ') && entry.assessmentType === 'WHITEBOX');
-  expect(seededWhitebox).toHaveLength(50);
-  expect(seededWhitebox.some((entry) => entry.status !== 'PLANNED')).toBe(true);
+  const calendar = calendarResponseBody.filter((entry) => !entry.application.name.startsWith('REGRESSION_'));
+  expect(calendar).toHaveLength(45);
+  expect(calendar.filter((entry) => entry.assessmentType === 'WHITEBOX')).toHaveLength(22);
+  expect(calendar.filter((entry) => entry.assessmentType === 'BLACK_GREY')).toHaveLength(23);
+  expect(calendar).toEqual(expect.arrayContaining([
+    expect.objectContaining({ application: expect.objectContaining({ name: 'NBP Internet Banking' }), plannedMonth: 'March', assessmentType: 'WHITEBOX', status: 'DEVELOPER_FIX' }),
+    expect.objectContaining({ application: expect.objectContaining({ name: 'NBP Internet Banking' }), plannedMonth: 'September', assessmentType: 'BLACK_GREY', status: 'PLANNED' }),
+    expect.objectContaining({ application: expect.objectContaining({ name: 'NBP Digital Android (Mobile App)' }), plannedMonth: 'February', assessmentType: 'BLACK_GREY', status: 'CLOSED' }),
+    expect.objectContaining({ application: expect.objectContaining({ name: 'NBP MPG RAAST Back office' }), plannedMonth: 'November', assessmentType: 'BLACK_GREY', status: 'PLANNED' })
+  ]));
 
   const januaryCalendarResponse = await systemApi.get(`/calendar?year=${currentYear}&startingMonth=January`);
   expect(januaryCalendarResponse.ok(), await januaryCalendarResponse.text()).toBe(true);
-  const januaryCalendar = (await januaryCalendarResponse.json()) as Array<{ plannedMonth?: string }>;
-  expect(januaryCalendar.length).toBeGreaterThan(0);
+  const januaryCalendarResponseBody = (await januaryCalendarResponse.json()) as Array<{ application?: { name: string }; plannedMonth?: string; assessmentType: string }>;
+  const januaryCalendar = januaryCalendarResponseBody.filter((entry) => !entry.application?.name.startsWith('REGRESSION_'));
+  expect(januaryCalendar).toHaveLength(2);
   expect(januaryCalendar.every((entry) => entry.plannedMonth === 'January')).toBe(true);
-
-  for (const application of seededApplications) {
-    const entries = seededWhitebox
-      .filter((entry) => entry.application.id === application.id)
-      .sort((a, b) => new Date(a.plannedStartDate).getTime() - new Date(b.plannedStartDate).getTime());
-    expect(entries, application.name).toHaveLength(2);
-    const first = new Date(entries[0].plannedStartDate);
-    const second = new Date(entries[1].plannedStartDate);
-    expect(second.getUTCMonth() - first.getUTCMonth()).toBe(6);
-  }
-
-  const monthlyCounts = new Map<number, number>();
-  for (const entry of seededWhitebox) {
-    const month = new Date(entry.plannedStartDate).getUTCMonth();
-    monthlyCounts.set(month, (monthlyCounts.get(month) ?? 0) + 1);
-  }
-  expect([...monthlyCounts.values()].every((count) => count <= 5)).toBe(true);
+  expect(januaryCalendar.every((entry) => entry.assessmentType === 'BLACK_GREY')).toBe(true);
 
   const engagementsResponse = await systemApi.get(`/engagements?year=${currentYear}`);
   expect(engagementsResponse.ok(), await engagementsResponse.text()).toBe(true);
-  const engagements = (await engagementsResponse.json()) as Array<{
+  const engagementsResponseBody = (await engagementsResponse.json()) as Array<{
     title: string;
     status: string;
     scheduleHealth?: 'GREEN' | 'YELLOW' | 'RED';
     scopingRecords?: unknown[];
   }>;
-  const seededEngagements = engagements.filter((engagement) => engagement.title.startsWith('Seeded '));
-  expect(seededEngagements).toHaveLength(50);
-  expect(seededEngagements).toEqual(expect.arrayContaining([
-    expect.objectContaining({ status: 'PAYSYS_APPRISE_INITIATED' }),
+  const engagements = engagementsResponseBody.filter((engagement) => !engagement.title.startsWith('REGRESSION_'));
+  expect(engagements).toHaveLength(45);
+  expect(engagements.map((engagement) => engagement.title).some((title) => title.startsWith('Seeded '))).toBe(false);
+  expect(engagements).toEqual(expect.arrayContaining([
     expect.objectContaining({ status: 'APPRISE_ASSESSMENT' }),
     expect.objectContaining({ status: 'DEVELOPER_FIX' }),
     expect.objectContaining({ status: 'CLOSED' }),
-    expect.objectContaining({ status: 'GO_LIVE' })
+    expect.objectContaining({ status: 'APPRISE_REVALIDATION' }),
+    expect.objectContaining({ status: 'NBP_IS_REVIEW_CLOSING_MEETING' })
   ]));
-  expect(seededEngagements.some((engagement) => (engagement.scopingRecords?.length ?? 0) > 0)).toBe(true);
-  expect(seededEngagements.some((engagement) => engagement.scheduleHealth === 'GREEN')).toBe(true);
+  expect(engagements.every((engagement) => (engagement.scopingRecords?.length ?? 0) === 0)).toBe(true);
+  expect(engagements.some((engagement) => engagement.scheduleHealth === 'GREEN')).toBe(true);
 
   const dashboardResponse = await systemApi.get('/dashboard/summary');
   expect(dashboardResponse.ok(), await dashboardResponse.text()).toBe(true);

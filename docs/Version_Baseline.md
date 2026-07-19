@@ -427,3 +427,33 @@ Code reference:
 
 - Branch: `codex/v0.18.8-production-hardening`
 - Version: `0.18.8`
+
+## v0.18.9 - Screenshot-Based Seeded Validation Data
+
+Status: Implemented on feature branch
+
+Version allocation:
+
+- `AGENTS.md` required remote version inspection before assigning the code version.
+- `origin/main` was fetched with prune and active remote branches were inspected.
+- `origin/main` contained `v0.18.7`; active branch `codex/v0.18.8-production-hardening` allocated `v0.18.8`.
+- This slice therefore uses `v0.18.9`.
+
+Baseline contents:
+
+- Reset restores screenshot-derived application and engagement data only.
+- Seeded applications: 23.
+- Seeded 2026 engagements: 45 total, 22 `WHITEBOX` and 23 `BLACK_GREY`.
+- Current engagement statuses are mapped from the pending-report tracker screenshot where rows match calendar applications.
+- No scoping records, reports, findings, risk acceptances, tickets, or synthetic `Seeded ...` applications are created.
+
+Documentation references:
+
+- `docs/plans/v0.18.9-screenshot-seeded-data-plan.md`
+- `docs/testing/v0.18.9-test-results.md`
+- `docs/user-guides/v0.18.9-screenshot-seeded-data-user-guide.md`
+
+Code reference:
+
+- Branch: `codex/v0.18.9-screenshot-seeded-data`
+- Version: `0.18.9`

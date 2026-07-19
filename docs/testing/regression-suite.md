@@ -49,7 +49,7 @@ npm.cmd run ops
 - Audit search results render in the paginated table pattern.
 - Notifications are created for assignment and due-check paths.
 - Users can view notifications, mark them read, and see unread counts update.
-- Seeded baseline restores 3 organizations, 7 users, 25 applications, and 50 annual Whitebox engagements.
+- Seeded baseline restores 3 organizations, 7 users, 23 screenshot-derived applications, and 45 mixed Whitebox / Black-Grey 2026 engagements.
 - Each seeded application has two Whitebox engagements spaced six months apart.
 - Engagements render as lifecycle Kanban data across planned, active, review, closed, and Go-Live states.
 - Dashboard and Engagements expose derived schedule-health states for On Track, Needs Attention, and At Risk work using the configured warning window.
