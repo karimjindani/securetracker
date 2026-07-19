@@ -13,6 +13,12 @@ const port = Number(process.env.OPS_CONSOLE_PORT || 3300);
 const token = process.env.OPS_CONSOLE_TOKEN || '';
 const runs = new Map();
 
+function defaultMinioHealthUrl() {
+  const host = process.env.MINIO_HEALTH_HOST || 'localhost';
+  const port = process.env.MINIO_API_HOST_PORT || process.env.MINIO_PORT || '9000';
+  return `http://${host}:${port}/minio/health/live`;
+}
+
 function json(response, status, body) {
   response.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
@@ -160,7 +166,7 @@ async function health() {
     httpProbe('backend-api', process.env.API_HEALTH_URL || 'http://localhost:3000/health'),
     tcpProbe('postgres', Number(process.env.POSTGRES_PORT || 5432)),
     httpProbe('keycloak', process.env.KEYCLOAK_BASE_URL || 'http://localhost:18080/realms/securetracker'),
-    httpProbe('minio', process.env.MINIO_HEALTH_URL || 'http://localhost:9000/minio/health/live'),
+    httpProbe('minio', process.env.MINIO_HEALTH_URL || defaultMinioHealthUrl()),
     httpProbe('smtp-test-service', process.env.SMTP_UI_URL || 'http://localhost:8025'),
     containers()
   ]);

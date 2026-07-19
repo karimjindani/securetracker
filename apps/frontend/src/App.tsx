@@ -97,7 +97,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthProvider.js';
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || 'http://localhost:3000';
 GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).toString();
 
 type RecordStatus = 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
